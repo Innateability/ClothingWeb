@@ -86,7 +86,7 @@ def setup():
 @admin_required
 def dashboard():
     admin            = get_admin()
-    total_products   = Product.query.count()
+    total_products   = Product.query.filter_by(is_active=True).count()
     pending_orders   = Order.query.filter_by(status="pending").count()
     confirmed_orders = Order.query.filter_by(status="confirmed").count()
     recent_orders    = Order.query.order_by(Order.created_at.desc()).limit(10).all()
@@ -107,7 +107,7 @@ def dashboard():
 @admin_required
 def products():
     admin        = get_admin()
-    all_products = Product.query.order_by(Product.created_at.desc()).all()
+    all_products = Product.query.filter_by(is_active=True).order_by(Product.created_at.desc()).all()
     return render_template("admin/products.html",
         products=all_products,
         admin=admin,
@@ -250,7 +250,7 @@ def edit_product(product_id):
 @admin_required
 def delete_product(product_id):
     product = db.get_or_404(Product, product_id)
-    db.session.delete(product)
+    product.is_active = False
     db.session.commit()
     flash("Product deleted.", "success")
     return redirect(url_for("admin.products"))

@@ -1389,3 +1389,8 @@ footer {
 .gap-2{gap:8px} .gap-3{gap:14px}
 .text-muted{color:var(--muted)} .text-small{font-size:0.8rem}
 .w-full{width:100%} .text-center{text-align:center}
+
+.logo {
+    height: 60px;
+    width: auto;
+}

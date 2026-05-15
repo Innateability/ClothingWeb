@@ -50,6 +50,7 @@ def initialize_payment(email, amount_naira, order_id, callback_url, metadata=Non
             )
         else:
             print(f"Paystack init error: {result.get('message')}")
+            print(email)
             return None, None
 
     except requests.RequestException as e:
