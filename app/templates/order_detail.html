@@ -1,0 +1,155 @@
+{% extends "admin/layout.html" %}
+{% block title %}Order #{{ order.id }}{% endblock %}
+{% block page_title %}Order #{{ order.id }}{% endblock %}
+{% block content %}
+<div style="max-width:700px">
+
+  <!-- BUYER & STATUS -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <span class="card-title">Order Details</span>
+      <span class="tag
+        {% if order.status == 'confirmed' %}tag-green
+        {% elif order.status == 'rejected' %}tag-red
+        {% else %}tag-gold{% endif %}">
+        {% if order.status == 'confirmed' %}✓
+        {% elif order.status == 'rejected' %}✕
+        {% else %}⏳{% endif %}
+        {{ order.status | title }}
+      </span>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:10px;font-size:0.9rem">
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:100px">Buyer</span>
+        <span style="font-weight:600">{{ order.buyer.name }}</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:100px">Email</span>
+        <span>{{ order.buyer.email }}</span>
+      </div>
+      {% if order.buyer.phone %}
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:100px">Phone</span>
+        <span>{{ order.buyer.phone }}</span>
+      </div>
+      {% endif %}
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:100px">Order Date</span>
+        <span>{{ order.created_at.strftime('%d %B %Y, %I:%M %p') }}</span>
+      </div>
+      {% if order.notes %}
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:100px">Notes</span>
+        <span>{{ order.notes }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ORDER ITEMS -->
+  <div class="card mb-4">
+    <div class="card-header"><span class="card-title">Items Ordered</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Item</th><th>Size</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr>
+        </thead>
+        <tbody>
+          {% for item in order.items %}
+          <tr>
+            <td>
+              <div style="font-weight:600">{{ item.product.name }}</div>
+              <div style="font-size:0.75rem;color:var(--muted)">
+                {{ item.product.product_type.name }}
+                {% if item.product.kind %} / {{ item.product.kind.name }}{% endif %}
+              </div>
+            </td>
+            <td>{{ item.size or '—' }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>₦{{ "{:,.0f}".format(item.price) }}</td>
+            <td style="font-family:'Syne',sans-serif;font-weight:700">
+              ₦{{ "{:,.0f}".format(item.price * item.quantity) }}
+            </td>
+          </tr>
+          {% endfor %}
+
+          <!-- TOTAL ROW -->
+          <tr style="background:rgba(255,77,77,0.06)">
+            <td colspan="4" style="text-align:right;font-family:'Syne',sans-serif;font-weight:700;padding:16px">
+              Total
+            </td>
+            <td style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;
+                       background:var(--g-fire);-webkit-background-clip:text;
+                       -webkit-text-fill-color:transparent;background-clip:text;padding:16px">
+              ₦{{ "{:,.0f}".format(order.total) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PAYMENT STATUS -->
+  {% if order.payment %}
+  <div class="card mb-4">
+    <div class="card-header"><span class="card-title">Payment Info</span></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:10px;font-size:0.9rem">
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:120px">Amount</span>
+        <span style="font-weight:600">₦{{ "{:,.0f}".format(order.payment.amount) }}</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:120px">Status</span>
+        {% if order.payment.confirmed %}
+          <span class="tag tag-green">✓ Confirmed</span>
+        {% else %}
+          <span class="tag tag-gold">⏳ Awaiting</span>
+        {% endif %}
+      </div>
+      {% if order.payment.confirmed_at %}
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:120px">Confirmed At</span>
+        <span>{{ order.payment.confirmed_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+      </div>
+      {% endif %}
+      {% if order.payment.buyer_note %}
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:120px">Buyer Note</span>
+        <span>{{ order.payment.buyer_note }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ACTION BUTTONS -->
+  {% if order.status == 'pending' %}
+  <div class="card mb-4">
+    <div class="card-header"><span class="card-title">Actions</span></div>
+    <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap">
+      <form method="POST" action="{{ url_for('admin.confirm_payment', order_id=order.id) }}">
+        <button type="submit" class="btn btn-lime btn-lg">
+          ✓ Confirm Payment
+        </button>
+      </form>
+      <form method="POST" action="{{ url_for('admin.reject_payment', order_id=order.id) }}">
+        <button type="submit" class="btn btn-danger btn-lg"
+                onclick="return confirm('Reject this order?')">
+          ✕ Reject Order
+        </button>
+      </form>
+    </div>
+  </div>
+  {% elif order.status == 'confirmed' %}
+  <div class="alert alert-success" style="margin-bottom:16px">
+    ✓ Payment has been confirmed for this order.
+  </div>
+  {% elif order.status == 'rejected' %}
+  <div class="alert alert-error" style="margin-bottom:16px">
+    ✕ This order was rejected.
+  </div>
+  {% endif %}
+
+  <a href="{{ url_for('admin.orders') }}" class="btn btn-ghost">← Back to Orders</a>
+</div>
+{% endblock %}

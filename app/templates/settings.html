@@ -1,0 +1,107 @@
+{% extends "admin/layout.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_title %}Store Settings{% endblock %}
+{% block content %}
+<div style="max-width:640px">
+
+  <div class="card mb-4">
+    <div class="card-header">
+      <span class="card-title">Store & Payment Details</span>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+
+        <div style="margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid rgba(255,255,255,0.07)">
+          <p style="font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;
+                    text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:16px">
+            Basic Info
+          </p>
+          <div class="form-group">
+            <label class="form-label">Store / Admin Name</label>
+            <input type="text" name="name" value="{{ admin.name }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact Phone</label>
+            <input type="tel" name="phone" value="{{ admin.phone }}"
+                   placeholder="+234..." required>
+            <p style="font-size:0.75rem;color:var(--muted);margin-top:6px">
+              This is the number buyers will be told to call before and after payment.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid rgba(255,255,255,0.07)">
+          <p style="font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;
+                    text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:16px">
+            Payment / Bank Details
+          </p>
+
+          <!-- LIVE PREVIEW -->
+          <div style="background:rgba(255,77,77,0.06);border:1px solid rgba(255,77,77,0.15);
+                      border-radius:12px;padding:20px;margin-bottom:20px;text-align:center">
+            <p style="font-size:0.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;
+                      letter-spacing:0.1em;margin-bottom:6px">Preview — What buyers will see</p>
+            <div style="color:rgba(255,255,255,0.5);font-size:0.85rem" id="preview-bank">{{ admin.bank_name }}</div>
+            <div style="color:rgba(255,255,255,0.65);font-size:0.88rem;margin-top:4px" id="preview-name">{{ admin.account_name }}</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;
+                        letter-spacing:0.12em;margin:10px 0;
+                        background:var(--g-fire);-webkit-background-clip:text;
+                        -webkit-text-fill-color:transparent;background-clip:text"
+                 id="preview-number">{{ admin.account_number }}</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Bank Name</label>
+            <input type="text" name="bank_name" value="{{ admin.bank_name }}"
+                   placeholder="e.g. First Bank" required
+                   oninput="document.getElementById('preview-bank').textContent=this.value">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Account Number</label>
+              <input type="text" name="account_number" value="{{ admin.account_number }}"
+                     placeholder="0123456789" required
+                     oninput="document.getElementById('preview-number').textContent=this.value">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Account Name</label>
+              <input type="text" name="account_name" value="{{ admin.account_name }}"
+                     required
+                     oninput="document.getElementById('preview-name').textContent=this.value">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:22px">
+          <p style="font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;
+                    text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:16px">
+            Change Password (optional)
+          </p>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" name="new_password" placeholder="Leave blank to keep current password">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-fire btn-lg">Save Settings</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- DANGER ZONE -->
+  <div class="card" style="border-color:rgba(255,77,77,0.2)">
+    <div class="card-header" style="background:rgba(255,77,77,0.06)">
+      <span class="card-title text-red" style="color:#ff7777">Danger Zone</span>
+    </div>
+    <div class="card-body">
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">
+        Actions here are permanent and cannot be undone.
+      </p>
+      <a href="{{ url_for('base.index') }}" class="btn btn-ghost btn-sm" target="_blank">
+        View Store →
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

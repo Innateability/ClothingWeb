@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% block title %}My Orders{% endblock %}
+{% block content %}
+<h1 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:28px">
+  My Orders
+</h1>
+
+{% if orders %}
+{% for order in orders %}
+<div class="order-card" style="animation-delay:{{ loop.index0 * 0.08 }}s">
+  <div class="order-card-header">
+    <div>
+      <span class="order-id">Order #{{ order.id }}</span>
+      <span style="font-size:0.8rem;color:var(--muted);margin-left:12px">
+        {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}
+      </span>
+    </div>
+    <span class="tag {% if order.status == 'confirmed' %}tag-green{% elif order.status == 'rejected' %}tag-red{% else %}tag-gold{% endif %}">
+      {% if order.status == 'confirmed' %}✓{% elif order.status == 'rejected' %}✕{% else %}⏳{% endif %}
+      {{ order.status | title }}
+    </span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th></tr></thead>
+      <tbody>
+        {% for item in order.items %}
+        <tr>
+          <td style="font-weight:500">{{ item.product.name }}</td>
+          <td>{{ item.size or '—' }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>₦{{ "{:,.0f}".format(item.price * item.quantity) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:14px 22px;border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center">
+    <span style="font-family:'Syne',sans-serif;font-weight:700">
+      Total: <span style="background:var(--g-fire);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+        ₦{{ "{:,.0f}".format(order.total) }}
+      </span>
+    </span>
+    {% if order.status == 'confirmed' %}
+      <span style="font-size:0.8rem;color:var(--lime)">✓ Payment confirmed</span>
+    {% elif order.status == 'pending' %}
+      <span style="font-size:0.8rem;color:var(--muted)">Awaiting payment confirmation</span>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+  <span class="empty-icon">📦</span>
+  <div class="empty-title">No orders yet</div>
+  <p style="font-size:0.88rem;margin-bottom:24px">Your order history will appear here.</p>
+  <a href="{{ url_for('base.index') }}" class="btn btn-fire btn-lg">Start Shopping →</a>
+</div>
+{% endif %}
+{% endblock %}

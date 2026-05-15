@@ -1,0 +1,131 @@
+{% extends "layout.html" %}
+{% block title %}My Cart{% endblock %}
+{% block content %}
+<div class="flex-between mb-4">
+  <h1 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em">
+    My Cart <span style="color:var(--muted);font-weight:400;font-size:1.2rem">({{ items|length }})</span>
+  </h1>
+  <a href="{{ url_for('base.index') }}" class="btn btn-ghost">← Continue Shopping</a>
+</div>
+
+{% if items %}
+<form method="POST" action="{{ url_for('base.checkout') }}">
+  <div class="cart-layout">
+
+    <!-- ITEMS -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Items</span>
+        <label style="display:flex;align-items:center;gap:7px;font-size:0.82rem;color:var(--muted);cursor:pointer;font-weight:400">
+          <input type="checkbox" id="select-all" style="width:auto;accent-color:var(--coral)"> Select All
+        </label>
+      </div>
+      <div class="card-body" style="padding:0 24px">
+        {% for item in items %}
+        <div class="cart-item">
+          <input type="checkbox" name="selected_items" value="{{ item.id }}"
+                 class="item-cb" style="width:auto;accent-color:var(--coral)">
+
+          {% if item.product.primary_image() %}
+            <img src="{{ url_for('static', filename='images/' + item.product.primary_image()) }}"
+                 alt="{{ item.product.name }}" class="cart-item-img">
+          {% else %}
+            <div class="cart-item-img-placeholder">👕</div>
+          {% endif %}
+
+          <div>
+            <div class="cart-item-name">{{ item.product.name }}</div>
+            <div class="cart-item-meta">
+              {% if item.size %}<span>Size: {{ item.size }}</span>{% endif %}
+              <span>Qty: {{ item.quantity }}</span>
+              <span style="color:rgba(255,255,255,0.3)">Expires {{ item.expires_at.strftime('%d %b %Y') }}</span>
+            </div>
+            {% if item.price_changed() %}
+            <div class="price-change-alert">
+              ⚠️ Price updated: ₦{{ "{:,.0f}".format(item.price_at_add) }} → ₦{{ "{:,.0f}".format(item.product.effective_price()) }}
+            </div>
+            {% endif %}
+          </div>
+
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+            <div class="cart-item-price">
+              ₦{{ "{:,.0f}".format(item.product.effective_price() * item.quantity) }}
+            </div>
+            <form method="POST" action="{{ url_for('base.remove_from_cart', item_id=item.id) }}" style="display:inline">
+              <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div>
+      <div class="summary-card">
+        <div class="summary-header">
+          <div class="summary-title">Order Summary</div>
+        </div>
+        <div class="summary-body">
+          <div id="summary-lines" style="margin-bottom:16px">
+            <p style="font-size:0.85rem;color:var(--muted)">Select items to see breakdown</p>
+          </div>
+          <div class="summary-total">
+            <span class="summary-total-label">Total</span>
+            <span class="summary-total-price" id="grand-total">₦0</span>
+          </div>
+          <button type="submit" class="btn btn-fire btn-lg btn-full mt-4">
+            Proceed to Checkout →
+          </button>
+          <p style="font-size:0.75rem;color:var(--muted);text-align:center;margin-top:10px">
+            Only selected items will be checked out
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+const selectAll = document.getElementById('select-all');
+const checkboxes = document.querySelectorAll('.item-cb');
+const items = [
+  {% for item in items %}
+  { id: {{ item.id }}, name: {{ item.product.name | tojson }}, price: {{ item.product.effective_price() }}, qty: {{ item.quantity }} },
+  {% endfor %}
+];
+
+function fmt(n) { return '₦' + Math.round(n).toLocaleString(); }
+
+function updateSummary() {
+  const selected = [...checkboxes].filter(cb => cb.checked);
+  let total = 0;
+  let html = '';
+  selected.forEach(cb => {
+    const item = items.find(i => i.id === parseInt(cb.value));
+    if (item) {
+      const sub = item.price * item.qty;
+      total += sub;
+      html += `<div class="summary-line"><span>${item.name} ×${item.qty}</span><span>${fmt(sub)}</span></div>`;
+    }
+  });
+  document.getElementById('summary-lines').innerHTML = html || '<p style="font-size:0.85rem;color:var(--muted)">Select items to see breakdown</p>';
+  document.getElementById('grand-total').textContent = fmt(total);
+}
+
+selectAll.addEventListener('change', () => {
+  checkboxes.forEach(cb => cb.checked = selectAll.checked);
+  updateSummary();
+});
+checkboxes.forEach(cb => cb.addEventListener('change', updateSummary));
+</script>
+
+{% else %}
+<div class="empty-state">
+  <span class="empty-icon">🛒</span>
+  <div class="empty-title">Your cart is empty</div>
+  <p style="font-size:0.88rem;margin-bottom:24px">Discover amazing pieces and add them to your cart.</p>
+  <a href="{{ url_for('base.index') }}" class="btn btn-fire btn-lg">Shop Now →</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "admin/layout.html" %}
+{% block title %}Products{% endblock %}
+{% block page_title %}Products{% endblock %}
+{% block content %}
+
+<div class="flex-between mb-4">
+  <p style="color:var(--muted);font-size:0.85rem">{{ products|length }} product{{ 's' if products|length != 1 }}</p>
+  <a href="{{ url_for('admin.add_product') }}" class="btn btn-fire">+ Add Product</a>
+</div>
+
+{% if products %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Image</th><th>Name</th><th>Type / Kind</th><th>Price</th><th>Sale</th><th>Stock</th><th>Gender</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td>
+            {% if p.primary_image() %}
+              <img src="{{ url_for('static', filename='images/' + p.primary_image()) }}"
+                   style="width:48px;height:60px;object-fit:cover;border-radius:8px">
+            {% else %}
+              <div style="width:48px;height:60px;background:rgba(255,77,77,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem">👕</div>
+            {% endif %}
+          </td>
+          <td style="font-family:'Syne',sans-serif;font-weight:700;max-width:180px">{{ p.name }}</td>
+          <td style="color:var(--muted);font-size:0.82rem">
+            {{ p.product_type.name }}{% if p.kind %}<br><span>{{ p.kind.name }}</span>{% endif %}
+          </td>
+          <td style="font-weight:600">₦{{ "{:,.0f}".format(p.price) }}</td>
+          <td>
+            {% if p.on_sale %}
+              <span class="tag tag-green">₦{{ "{:,.0f}".format(p.sale_price) }}</span>
+            {% else %}
+              <form method="POST" action="{{ url_for('admin.toggle_sale', product_id=p.id) }}" style="display:flex;gap:6px;align-items:center">
+                <input type="number" name="sale_price" placeholder="Sale ₦" style="width:90px;padding:5px 8px;font-size:0.78rem">
+                <button type="submit" class="btn btn-sm" style="background:rgba(184,255,87,0.1);color:var(--lime);border:1px solid rgba(184,255,87,0.2)">Set</button>
+              </form>
+            {% endif %}
+            {% if p.on_sale %}
+              <form method="POST" action="{{ url_for('admin.toggle_sale', product_id=p.id) }}" style="margin-top:4px">
+                <button type="submit" class="btn btn-sm btn-danger">Remove Sale</button>
+              </form>
+            {% endif %}
+          </td>
+          <td>
+            <span class="tag {% if p.stock > 0 %}tag-sky{% else %}tag-red{% endif %}">{{ p.stock }}</span>
+          </td>
+          <td><span class="tag tag-muted">{{ p.gender | title }}</span></td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <a href="{{ url_for('admin.edit_product', product_id=p.id) }}" class="btn btn-ghost btn-sm">Edit</a>
+              <form method="POST" action="{{ url_for('admin.delete_product', product_id=p.id) }}">
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this product?')">Del</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <span class="empty-icon">📦</span>
+  <div class="empty-title">No products yet</div>
+  <a href="{{ url_for('admin.add_product') }}" class="btn btn-fire mt-3">Add First Product</a>
+</div>
+{% endif %}
+{% endblock %}

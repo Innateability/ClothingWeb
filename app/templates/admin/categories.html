@@ -1,0 +1,108 @@
+{% extends "admin/layout.html" %}
+{% block title %}Categories{% endblock %}
+{% block page_title %}Categories{% endblock %}
+{% block content %}
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+  <!-- PRODUCT TYPES -->
+  <div>
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Product Types</span></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.add_type') }}"
+              style="display:flex;gap:8px;margin-bottom:16px">
+          <input type="text" name="name" placeholder="e.g. Shoes, Clothing" style="flex:1">
+          <button type="submit" class="btn btn-fire btn-sm">+ Add</button>
+        </form>
+        {% for t in types %}
+        <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);
+                    display:flex;justify-content:space-between;align-items:center">
+          <span style="font-family:'Syne',sans-serif;font-weight:700">{{ t.name }}</span>
+          <form method="POST" action="{{ url_for('admin.delete_type', type_id=t.id) }}">
+            <button type="submit" class="btn btn-danger btn-sm"
+                    onclick="return confirm('Delete type and all its kinds?')">Delete</button>
+          </form>
+        </div>
+        {% else %}
+        <p style="color:var(--muted);font-size:0.85rem">No types yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- KINDS -->
+  <div>
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Product Kinds</span></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.add_kind') }}"
+              style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          <select name="type_id" required>
+            <option value="">Select type</option>
+            {% for t in types %}
+              <option value="{{ t.id }}">{{ t.name }}</option>
+            {% endfor %}
+          </select>
+          <div style="display:flex;gap:8px">
+            <input type="text" name="name" placeholder="e.g. Sneakers, Women Shoes" style="flex:1">
+            <button type="submit" class="btn btn-fire btn-sm">+ Add</button>
+          </div>
+        </form>
+        {% for t in types %}
+          {% for k in t.kinds %}
+          <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);
+                      display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span style="font-family:'Syne',sans-serif;font-weight:700">{{ k.name }}</span>
+              <span style="font-size:0.75rem;color:var(--muted);margin-left:8px">{{ t.name }}</span>
+            </div>
+            <form method="POST" action="{{ url_for('admin.delete_kind', kind_id=k.id) }}">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- COLORS -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Colors in Database</span>
+    <span class="tag tag-muted">{{ colors|length }} colors</span>
+  </div>
+  <div class="card-body">
+    <p class="text-small text-muted mb-4">
+      Colors are created automatically when you add/edit products.
+      You can delete unused ones here.
+    </p>
+
+    {% if colors %}
+    <div style="display:flex;flex-wrap:wrap;gap:10px">
+      {% for color in colors %}
+      <div style="display:flex;align-items:center;gap:8px;
+                  background:rgba(255,255,255,0.04);
+                  border:1px solid rgba(255,255,255,0.08);
+                  border-radius:10px;padding:8px 14px">
+        <span style="width:20px;height:20px;border-radius:50%;
+                     background:{{ color.name.lower() }};
+                     border:2px solid rgba(255,255,255,0.2);
+                     flex-shrink:0"></span>
+        <span style="font-size:0.85rem;font-weight:500">{{ color.name }}</span>
+        <span style="font-size:0.72rem;color:var(--muted)">
+          ({{ color.products|length }} product{{ 's' if color.products|length != 1 }})
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted text-small">No colors yet. Add products to create colors.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,292 @@
+{% extends "admin/layout.html" %}
+{% block title %}Add Product{% endblock %}
+{% block page_title %}Add Product{% endblock %}
+{% block content %}
+<div style="max-width:800px">
+  <form method="POST" enctype="multipart/form-data">
+
+    <!-- BASIC DETAILS -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Basic Details</span></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Product Name</label>
+          <input type="text" name="name" placeholder="e.g. Classic White Sneaker" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" placeholder="Describe the product..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Price (₦)</label>
+            <input type="number" name="price" step="0.01" min="0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stock Quantity</label>
+            <input type="number" name="stock" min="0" value="0" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gender</label>
+          <select name="gender" required>
+            <option value="">Select</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="unisex">Unisex</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORY -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Category</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Product Type</label>
+            <select name="product_type_id" id="type-sel" required onchange="loadKinds(this.value)">
+              <option value="">Select type</option>
+              {% for t in types %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kind (optional)</label>
+            <select name="kind_id" id="kind-sel">
+              <option value="">Select kind</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLORS - unlimited -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">Colors</span>
+        <button type="button" class="btn btn-fire btn-sm" onclick="addColor()">+ Add Color</button>
+      </div>
+      <div class="card-body">
+        <p class="text-small text-muted mb-3">Add as many colors as the product comes in.</p>
+
+        <div id="colors-container" style="display:flex;flex-direction:column;gap:10px">
+          <div class="color-row" id="color-0">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div id="preview-color-0"
+                   style="width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);
+                          background:#cccccc;flex-shrink:0;transition:background 0.2s"></div>
+              <input type="text" name="colors[]" placeholder="e.g. Black, #1a1a1a"
+                     style="flex:1" oninput="updatePreview(this,'preview-color-0')">
+              <button type="button" class="btn btn-danger btn-sm" onclick="removeColor('color-0')">Remove</button>
+            </div>
+          </div>
+          <div class="color-row" id="color-1">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div id="preview-color-1"
+                   style="width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);
+                          background:#cccccc;flex-shrink:0;transition:background 0.2s"></div>
+              <input type="text" name="colors[]" placeholder="e.g. White, #ffffff"
+                     style="flex:1" oninput="updatePreview(this,'preview-color-1')">
+              <button type="button" class="btn btn-danger btn-sm" onclick="removeColor('color-1')">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUICK SWATCHES -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.07)">
+          <p class="text-small text-muted mb-3">Quick pick:</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            {% set swatches = [
+              ('Black','#111111'),('White','#ffffff'),('Red','#e53935'),
+              ('Navy','#1a237e'),('Blue','#1976d2'),('Sky Blue','#0288d1'),
+              ('Green','#2e7d32'),('Lime','#7cb342'),('Yellow','#f9a825'),
+              ('Orange','#e65100'),('Pink','#e91e63'),('Purple','#6a1b9a'),
+              ('Brown','#4e342e'),('Grey','#616161'),('Gold','#d4af37'),
+              ('Silver','#9e9e9e'),('Beige','#d7ccc8'),('Maroon','#880e4f'),
+              ('Coral','#ff7043'),('Teal','#00695c')
+            ] %}
+            {% for name, hex in swatches %}
+            <button type="button"
+                    onclick="addColorFromSwatch('{{ name }}','{{ hex }}')"
+                    title="{{ name }}"
+                    style="width:28px;height:28px;border-radius:50%;background:{{ hex }};
+                           border:2px solid rgba(255,255,255,0.15);cursor:pointer;
+                           transition:transform 0.15s,box-shadow 0.15s"
+                    onmouseover="this.style.transform='scale(1.3)';this.style.boxShadow='0 0 10px {{ hex }}99'"
+                    onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIZES -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Sizes</span></div>
+      <div class="card-body">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px" id="sizes-container">
+          {% for s in ['XS','S','M','L','XL','XXL','36','37','38','39','40','41','42','43','44','45'] %}
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;
+                        background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+                        border-radius:8px;padding:6px 12px;transition:all 0.2s">
+            <input type="checkbox" name="sizes" value="{{ s }}" style="width:auto;accent-color:var(--coral)"> {{ s }}
+          </label>
+          {% endfor %}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="custom-size" placeholder="Custom size e.g. 46" style="width:200px">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addSize()">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMAGES -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Product Images</span></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Upload Images (first will be primary)</label>
+          <input type="file" name="images" accept="image/*" multiple onchange="previewImages(this)"
+                 style="background:rgba(255,255,255,0.04);padding:10px;border-radius:8px;
+                        border:1px dashed rgba(255,255,255,0.15)">
+        </div>
+        <div id="img-previews" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px">
+      <button type="submit" class="btn btn-fire btn-lg">Save Product</button>
+      <a href="{{ url_for('admin.products') }}" class="btn btn-ghost btn-lg">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+// ── KINDS ─────────────────────────────────────────────────────
+const kindsData = {
+  {% for t in types %}
+  {{ t.id }}: [{% for k in t.kinds %}{"id":{{ k.id }},"name":"{{ k.name }}"}{% if not loop.last %},{% endif %}{% endfor %}],
+  {% endfor %}
+};
+function loadKinds(typeId) {
+  const sel = document.getElementById('kind-sel');
+  sel.innerHTML = '<option value="">Select kind</option>';
+  (kindsData[typeId] || []).forEach(k => {
+    const o = document.createElement('option');
+    o.value = k.id; o.textContent = k.name;
+    sel.appendChild(o);
+  });
+}
+
+// ── COLORS ────────────────────────────────────────────────────
+let colorCount = 2;
+
+function updatePreview(input, previewId) {
+  const el = document.getElementById(previewId);
+  if (el) el.style.background = input.value.trim() || '#cccccc';
+}
+
+function addColor(name = '', hex = '') {
+  const id  = 'color-' + colorCount;
+  const pid = 'preview-' + id;
+  colorCount++;
+
+  const div = document.createElement('div');
+  div.className = 'color-row';
+  div.id = id;
+  div.style.cssText = 'opacity:0;transform:translateY(8px);transition:opacity 0.25s,transform 0.25s';
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="${pid}"
+           style="width:36px;height:36px;border-radius:50%;
+                  border:2px solid rgba(255,255,255,0.2);
+                  background:${hex || '#cccccc'};
+                  flex-shrink:0;transition:background 0.2s"></div>
+      <input type="text" name="colors[]"
+             value="${name}"
+             placeholder="e.g. Black, Red, #1a1a1a"
+             style="flex:1"
+             oninput="updatePreview(this,'${pid}')">
+      <button type="button" class="btn btn-danger btn-sm"
+              onclick="removeColor('${id}')">Remove</button>
+    </div>`;
+
+  document.getElementById('colors-container').appendChild(div);
+  requestAnimationFrame(() => {
+    div.style.opacity = '1';
+    div.style.transform = 'translateY(0)';
+  });
+}
+
+function removeColor(id) {
+  const rows = document.querySelectorAll('.color-row');
+  if (rows.length <= 1) {
+    // Just clear the last one instead of removing
+    const input = document.querySelector('#' + id + ' input[name="colors[]"]');
+    const preview = document.querySelector('#' + id + ' [id^="preview"]');
+    if (input) input.value = '';
+    if (preview) preview.style.background = '#cccccc';
+    return;
+  }
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.transition = 'opacity 0.2s,transform 0.2s';
+  el.style.opacity = '0';
+  el.style.transform = 'translateX(-10px)';
+  setTimeout(() => el.remove(), 220);
+}
+
+function addColorFromSwatch(name, hex) {
+  // Fill an empty input first if one exists
+  const inputs = document.querySelectorAll('#colors-container input[name="colors[]"]');
+  for (const input of inputs) {
+    if (!input.value.trim()) {
+      input.value = name;
+      const row = input.closest('.color-row');
+      const preview = row.querySelector('[id^="preview"]');
+      if (preview) preview.style.background = hex;
+      return;
+    }
+  }
+  // Otherwise add a new row
+  addColor(name, hex);
+}
+
+// ── SIZES ──────────────────────────────────────────────────────
+function addSize() {
+  const val = document.getElementById('custom-size').value.trim();
+  if (!val) return;
+  const label = document.createElement('label');
+  label.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.25);border-radius:8px;padding:6px 12px';
+  label.innerHTML = `<input type="checkbox" name="sizes" value="${val}" style="width:auto;accent-color:var(--coral)" checked> ${val}`;
+  document.getElementById('sizes-container').appendChild(label);
+  document.getElementById('custom-size').value = '';
+}
+
+// ── IMAGE PREVIEWS ─────────────────────────────────────────────
+function previewImages(input) {
+  const container = document.getElementById('img-previews');
+  container.innerHTML = '';
+  [...input.files].forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px';
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:80px;height:100px;object-fit:cover;border-radius:8px;border:2px solid rgba(255,77,77,0.3)';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:0.65rem;font-weight:700;';
+      lbl.style.color = i === 0 ? 'var(--lime)' : 'var(--muted)';
+      lbl.textContent = i === 0 ? 'PRIMARY' : 'Image ' + (i + 1);
+      wrap.appendChild(img);
+      wrap.appendChild(lbl);
+      container.appendChild(wrap);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+</script>
+{% endblock %}

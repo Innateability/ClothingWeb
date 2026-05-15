@@ -1,0 +1,209 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">New Season Collection</div>
+    <h1 class="hero-title">Dress to<br>Dominate.</h1>
+    <p class="hero-sub">Curated fashion pieces for every style. From streetwear to luxury — find your fit.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;animation:fadeUp 0.6s 0.65s ease both">
+      <a href="#products" class="btn btn-fire btn-lg">Shop Now →</a>
+      <a href="{{ url_for('base.index', on_sale=1) }}" class="btn btn-ghost btn-lg">View Sales 🔥</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">{{ products|length }}+</div>
+        <div class="hero-stat-label">Products</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">{{ types|length }}+</div>
+        <div class="hero-stat-label">Categories</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">100%</div>
+        <div class="hero-stat-label">Authentic</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">Fast</div>
+        <div class="hero-stat-label">Delivery</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<form method="GET" action="{{ url_for('base.index') }}" class="filter-bar" id="products">
+
+  <div class="filter-group">
+    <span class="filter-label">Category</span>
+    <select name="type_id" onchange="loadKinds(this.value)">
+      <option value="">All Types</option>
+      {% for t in types %}
+        <option value="{{ t.id }}" {% if selected_type_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Kind</span>
+    <select name="kind_id" id="kind-sel">
+      <option value="">All Kinds</option>
+      {% if selected_type_id %}
+        {% for t in types %}{% if t.id == selected_type_id %}
+          {% for k in t.kinds %}
+            <option value="{{ k.id }}" {% if selected_kind_id == k.id %}selected{% endif %}>{{ k.name }}</option>
+          {% endfor %}
+        {% endif %}{% endfor %}
+      {% endif %}
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Gender</span>
+    <select name="gender">
+      <option value="">All</option>
+      <option value="male"   {% if selected_gender == 'male' %}selected{% endif %}>Male</option>
+      <option value="female" {% if selected_gender == 'female' %}selected{% endif %}>Female</option>
+      <option value="unisex" {% if selected_gender == 'unisex' %}selected{% endif %}>Unisex</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Color</span>
+    <select name="color_id">
+      <option value="">All Colors</option>
+      {% for c in colors %}
+        <option value="{{ c.id }}" {% if selected_color_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Size</span>
+    <input type="text" name="size" value="{{ selected_size or '' }}" placeholder="e.g. XL, 42" style="width:90px">
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Min (₦)</span>
+    <input type="number" name="min_price" value="{{ min_price or '' }}" placeholder="0" style="width:90px">
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Max (₦)</span>
+    <input type="number" name="max_price" value="{{ max_price or '' }}" placeholder="Any" style="width:90px">
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">&nbsp;</span>
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;
+                  color:rgba(255,255,255,0.65);cursor:pointer;white-space:nowrap">
+      <input type="checkbox" name="on_sale" value="1"
+             {% if on_sale %}checked{% endif %}
+             style="width:auto;accent-color:var(--coral)">
+      🔥 On Sale
+    </label>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">&nbsp;</span>
+    <div style="display:flex;gap:8px">
+      <button type="submit" class="btn btn-fire btn-sm">Filter</button>
+      <a href="{{ url_for('base.index') }}" class="btn btn-ghost btn-sm">Clear</a>
+    </div>
+  </div>
+</form>
+
+<!-- RESULTS COUNT -->
+<div class="section-head">
+  <h2 class="section-title">
+    <span>{{ products|length }}</span> Product{{ 's' if products|length != 1 }}
+  </h2>
+</div>
+
+<!-- PRODUCT GRID -->
+{% if products %}
+<div class="product-grid">
+  {% for product in products %}
+  <div class="product-card">
+    <div class="product-img-wrap">
+      {% if product.primary_image() %}
+        <img src="{{ url_for('static', filename='images/' + product.primary_image()) }}"
+             alt="{{ product.name }}" class="product-img">
+      {% else %}
+        <div class="product-img-placeholder">👕</div>
+      {% endif %}
+
+      <div class="product-badges">
+        {% if product.on_sale %}
+          <span class="badge-sale">Sale</span>
+        {% endif %}
+        <span class="badge-gender">{{ product.gender }}</span>
+      </div>
+
+      <a href="{{ url_for('base.product_detail', product_id=product.id) }}"
+         class="product-quick-add">View Product →</a>
+    </div>
+
+    <a href="{{ url_for('base.product_detail', product_id=product.id) }}"
+       style="text-decoration:none;color:inherit;flex:1;display:flex;flex-direction:column">
+      <div class="product-info">
+        <div class="product-type-tag">
+          {{ product.product_type.name }}{% if product.kind %} / {{ product.kind.name }}{% endif %}
+        </div>
+        <div class="product-name">{{ product.name }}</div>
+
+        <!-- COLORS — from relationship -->
+        {% if product.colors %}
+        <div class="product-colors">
+          {% for color in product.colors %}
+            <span class="color-swatch"
+                  style="background:{{ color.name.lower() }}"
+                  title="{{ color.name }}"></span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="product-price">
+          {% if product.on_sale %}
+            <span class="price-now">₦{{ "{:,.0f}".format(product.sale_price) }}</span>
+            <span class="price-old">₦{{ "{:,.0f}".format(product.price) }}</span>
+          {% else %}
+            <span class="price-now">₦{{ "{:,.0f}".format(product.price) }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <span class="empty-icon">🛍️</span>
+  <div class="empty-title">No products found</div>
+  <p style="font-size:0.88rem;margin-bottom:20px">Try adjusting your filters or browse all items.</p>
+  <a href="{{ url_for('base.index') }}" class="btn btn-fire">Browse All</a>
+</div>
+{% endif %}
+
+<script>
+const kindsData = {
+  {% for t in types %}
+  {{ t.id }}: [{% for k in t.kinds %}{"id":{{ k.id }},"name":"{{ k.name }}"}{% if not loop.last %},{% endif %}{% endfor %}],
+  {% endfor %}
+};
+
+function loadKinds(typeId) {
+  const sel = document.getElementById('kind-sel');
+  sel.innerHTML = '<option value="">All Kinds</option>';
+  (kindsData[typeId] || []).forEach(k => {
+    const o = document.createElement('option');
+    o.value = k.id; o.textContent = k.name;
+    sel.appendChild(o);
+  });
+}
+</script>
+{% endblock %}

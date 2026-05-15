@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<h1 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:28px">My Account</h1>
+
+<div class="profile-layout">
+  <!-- PROFILE CARD -->
+  <div class="profile-card">
+    <div class="profile-avatar">{{ buyer.name[0].upper() }}</div>
+    <div class="profile-name">{{ buyer.name }}</div>
+    <div class="profile-email">{{ buyer.email }}</div>
+    {% if buyer.phone %}<div style="font-size:0.82rem;color:var(--muted);margin-top:4px">{{ buyer.phone }}</div>{% endif %}
+
+    <div style="margin-top:24px;display:flex;flex-direction:column;gap:10px">
+      <a href="{{ url_for('base.orders') }}" class="btn btn-electric btn-sm btn-full">My Orders</a>
+      <a href="{{ url_for('base.cart') }}" class="btn btn-ghost btn-sm btn-full">My Cart</a>
+      <a href="{{ url_for('base.logout') }}" class="btn btn-danger btn-sm btn-full">Logout</a>
+    </div>
+  </div>
+
+  <!-- RECENT ORDERS -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Recent Orders</span>
+      <a href="{{ url_for('base.orders') }}" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+    {% if orders %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Order</th><th>Date</th><th>Total</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for order in orders[:5] %}
+          <tr>
+            <td style="font-family:'Syne',sans-serif;font-weight:700">#{{ order.id }}</td>
+            <td style="color:var(--muted)">{{ order.created_at.strftime('%d %b %Y') }}</td>
+            <td style="font-weight:600">₦{{ "{:,.0f}".format(order.total) }}</td>
+            <td>
+              <span class="tag {% if order.status == 'confirmed' %}tag-green{% elif order.status == 'rejected' %}tag-red{% else %}tag-gold{% endif %}">
+                {{ order.status | title }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card-body"><p style="color:var(--muted);font-size:0.88rem">No orders yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

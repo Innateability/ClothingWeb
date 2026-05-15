@@ -1,0 +1,152 @@
+{% extends "layout.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div style="margin-bottom:20px">
+  <a href="{{ url_for('base.index') }}" class="btn btn-ghost btn-sm">← Back to Shop</a>
+</div>
+
+<div class="detail-wrap">
+
+  <!-- GALLERY -->
+  <div class="detail-gallery">
+    {% if product.images %}
+      <img src="{{ url_for('static', filename='images/' + product.primary_image()) }}"
+           alt="{{ product.name }}" class="detail-main-img" id="main-img">
+      {% if product.images|length > 1 %}
+      <div class="detail-thumbs">
+        {% for img in product.images %}
+        <img src="{{ url_for('static', filename='images/' + img.filename) }}"
+             alt="thumb"
+             class="detail-thumb {% if img.is_primary %}active{% endif %}"
+             onclick="swapImage(this)">
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="detail-img-placeholder">👕</div>
+    {% endif %}
+  </div>
+
+  <!-- INFO -->
+  <div class="detail-info">
+
+    <div>
+      <div class="detail-category">
+        {{ product.product_type.name }}{% if product.kind %} / {{ product.kind.name }}{% endif %}
+        &nbsp;·&nbsp; {{ product.gender | title }}
+      </div>
+      <h1 class="detail-title mt-2">{{ product.name }}</h1>
+    </div>
+
+    <!-- PRICE -->
+    <div class="detail-price-wrap">
+      {% if product.on_sale %}
+        <div class="detail-price"
+             style="background:var(--g-lime);-webkit-background-clip:text;background-clip:text">
+          ₦{{ "{:,.0f}".format(product.sale_price) }}
+        </div>
+        <div class="detail-old-price">₦{{ "{:,.0f}".format(product.price) }}</div>
+        <span class="badge-sale">SALE</span>
+      {% else %}
+        <div class="detail-price">₦{{ "{:,.0f}".format(product.price) }}</div>
+      {% endif %}
+    </div>
+
+    <!-- COLORS from relationship -->
+    {% if product.colors %}
+    <div class="detail-colors">
+      <div class="filter-label">Available Colors</div>
+      <div class="detail-colors-row">
+        {% for color in product.colors %}
+        <div class="color-tag">
+          <span class="color-swatch"
+                style="background:{{ color.name.lower() }};width:20px;height:20px;
+                       border-radius:50%;border:2px solid rgba(255,255,255,0.2)"></span>
+          {{ color.name }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- DESCRIPTION -->
+    {% if product.description %}
+    <p class="detail-desc">{{ product.description }}</p>
+    {% endif %}
+
+    <!-- STOCK -->
+    <div style="display:flex;align-items:center;gap:10px">
+      {% if product.stock > 0 %}
+        <span class="tag tag-green">● In Stock ({{ product.stock }})</span>
+      {% else %}
+        <span class="tag tag-red">● Out of Stock</span>
+      {% endif %}
+    </div>
+
+    <!-- ADD TO CART -->
+    {% if product.stock > 0 %}
+    <form method="POST" action="{{ url_for('base.add_to_cart', product_id=product.id) }}">
+
+      {% if product.get_sizes() %}
+      <div class="form-group">
+        <div class="filter-label">Select Size</div>
+        <input type="hidden" name="size" id="selected-size">
+        <div class="size-grid">
+          {% for size in product.get_sizes() %}
+            <button type="button" class="size-btn"
+                    onclick="pickSize(this, '{{ size }}')">{{ size }}</button>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="form-group">
+        <div class="filter-label">Quantity</div>
+        <div class="qty-row">
+          <div class="qty-control">
+            <button type="button" class="qty-btn" onclick="adjustQty(-1)">−</button>
+            <input type="number" name="quantity" id="qty-input"
+                   class="qty-input" value="1" min="1" max="{{ product.stock }}">
+            <button type="button" class="qty-btn" onclick="adjustQty(1)">+</button>
+          </div>
+          <span class="text-small text-muted">Max: {{ product.stock }}</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button type="submit" class="btn btn-fire btn-lg" style="flex:1">
+          🛒 Add to Cart
+        </button>
+      </div>
+    </form>
+    {% else %}
+    <button class="btn btn-ghost btn-lg btn-full"
+            disabled style="opacity:0.4;cursor:not-allowed">Out of Stock</button>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+function pickSize(btn, size) {
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('selected-size').value = size;
+}
+
+function adjustQty(delta) {
+  const input = document.getElementById('qty-input');
+  const max   = parseInt(input.max);
+  let val     = parseInt(input.value) + delta;
+  if (val < 1)   val = 1;
+  if (val > max) val = max;
+  input.value = val;
+}
+
+function swapImage(thumb) {
+  document.querySelectorAll('.detail-thumb').forEach(t => t.classList.remove('active'));
+  thumb.classList.add('active');
+  document.getElementById('main-img').src = thumb.src;
+}
+</script>
+{% endblock %}

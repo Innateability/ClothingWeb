@@ -1,0 +1,364 @@
+{% extends "admin/layout.html" %}
+{% block title %}Edit Product{% endblock %}
+{% block page_title %}Edit Product{% endblock %}
+{% block content %}
+<div style="max-width:800px">
+  <form method="POST" enctype="multipart/form-data">
+
+    <!-- BASIC DETAILS -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Basic Details</span></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Product Name</label>
+          <input type="text" name="name" value="{{ product.name }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description">{{ product.description or '' }}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Price (₦)</label>
+            <input type="number" name="price" step="0.01" value="{{ product.price }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stock</label>
+            <input type="number" name="stock" min="0" value="{{ product.stock }}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select name="gender">
+              <option value="male"   {% if product.gender == 'male' %}selected{% endif %}>Male</option>
+              <option value="female" {% if product.gender == 'female' %}selected{% endif %}>Female</option>
+              <option value="unisex" {% if product.gender == 'unisex' %}selected{% endif %}>Unisex</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:28px">
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;
+                          letter-spacing:0;font-weight:500;font-size:0.88rem;cursor:pointer">
+              <input type="checkbox" name="is_active"
+                     style="width:auto;accent-color:var(--lime)"
+                     {% if product.is_active %}checked{% endif %}>
+              Active (visible in store)
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SALE PRICING -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Sale Pricing</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:28px">
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;
+                          letter-spacing:0;font-weight:500;font-size:0.88rem;cursor:pointer">
+              <input type="checkbox" name="on_sale"
+                     style="width:auto;accent-color:var(--coral)"
+                     {% if product.on_sale %}checked{% endif %}>
+              On Sale
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sale Price (₦)</label>
+            <input type="number" name="sale_price" step="0.01"
+                   value="{{ product.sale_price or '' }}"
+                   placeholder="Enter sale price">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORY -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Category</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Product Type</label>
+            <select name="product_type_id" id="type-sel" required
+                    onchange="loadKinds(this.value)">
+              {% for t in types %}
+                <option value="{{ t.id }}"
+                        {% if t.id == product.product_type_id %}selected{% endif %}>
+                  {{ t.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kind</label>
+            <select name="kind_id" id="kind-sel">
+              <option value="">None</option>
+              {% if product.kind %}
+                <option value="{{ product.kind.id }}" selected>{{ product.kind.name }}</option>
+              {% endif %}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLORS — unlimited, from relationship -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">Colors</span>
+        <button type="button" class="btn btn-fire btn-sm" onclick="addColor()">+ Add Color</button>
+      </div>
+      <div class="card-body">
+        <p class="text-small text-muted mb-3">Add or remove colors. Each color is stored and reused across products.</p>
+
+        <div id="colors-container" style="display:flex;flex-direction:column;gap:10px">
+          {% if product.colors %}
+            {% for color in product.colors %}
+            <div class="color-row" id="color-existing-{{ loop.index }}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div id="preview-existing-{{ loop.index }}"
+                     style="width:36px;height:36px;border-radius:50%;
+                            border:2px solid rgba(255,255,255,0.2);
+                            background:{{ color.name.lower() }};
+                            flex-shrink:0;transition:background 0.2s"></div>
+                <input type="text" name="colors[]"
+                       value="{{ color.name }}"
+                       style="flex:1"
+                       oninput="updatePreview(this,'preview-existing-{{ loop.index }}')">
+                <button type="button" class="btn btn-danger btn-sm"
+                        onclick="removeColor('color-existing-{{ loop.index }}')">Remove</button>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <!-- Default empty row if no colors -->
+            <div class="color-row" id="color-0">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div id="preview-color-0"
+                     style="width:36px;height:36px;border-radius:50%;
+                            border:2px solid rgba(255,255,255,0.2);
+                            background:#cccccc;flex-shrink:0;transition:background 0.2s"></div>
+                <input type="text" name="colors[]"
+                       placeholder="e.g. Black, #1a1a1a"
+                       style="flex:1"
+                       oninput="updatePreview(this,'preview-color-0')">
+                <button type="button" class="btn btn-danger btn-sm"
+                        onclick="removeColor('color-0')">Remove</button>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- QUICK SWATCHES -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.07)">
+          <p class="text-small text-muted mb-3">Quick pick:</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            {% set swatches = [
+              ('Black','#111111'),('White','#ffffff'),('Red','#e53935'),
+              ('Navy','#1a237e'),('Blue','#1976d2'),('Sky Blue','#0288d1'),
+              ('Green','#2e7d32'),('Lime','#7cb342'),('Yellow','#f9a825'),
+              ('Orange','#e65100'),('Pink','#e91e63'),('Purple','#6a1b9a'),
+              ('Brown','#4e342e'),('Grey','#616161'),('Gold','#d4af37'),
+              ('Silver','#9e9e9e'),('Beige','#d7ccc8'),('Maroon','#880e4f'),
+              ('Coral','#ff7043'),('Teal','#00695c')
+            ] %}
+            {% for name, hex in swatches %}
+            <button type="button"
+                    onclick="addColorFromSwatch('{{ name }}','{{ hex }}')"
+                    title="{{ name }}"
+                    style="width:28px;height:28px;border-radius:50%;background:{{ hex }};
+                           border:2px solid rgba(255,255,255,0.15);cursor:pointer;
+                           transition:transform 0.15s,box-shadow 0.15s"
+                    onmouseover="this.style.transform='scale(1.3)';this.style.boxShadow='0 0 10px {{ hex }}99'"
+                    onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIZES -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Sizes</span></div>
+      <div class="card-body">
+        {% set current_sizes = product.get_sizes() %}
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px"
+             id="sizes-container">
+          {% for s in ['XS','S','M','L','XL','XXL','36','37','38','39','40','41','42','43','44','45'] %}
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;
+                        background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+                        border-radius:8px;padding:6px 12px">
+            <input type="checkbox" name="sizes" value="{{ s }}"
+                   style="width:auto;accent-color:var(--coral)"
+                   {% if s in current_sizes %}checked{% endif %}> {{ s }}
+          </label>
+          {% endfor %}
+          {% for s in current_sizes %}
+            {% if s not in ['XS','S','M','L','XL','XXL','36','37','38','39','40','41','42','43','44','45'] %}
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;
+                          background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.25);
+                          border-radius:8px;padding:6px 12px">
+              <input type="checkbox" name="sizes" value="{{ s }}"
+                     style="width:auto;accent-color:var(--coral)" checked> {{ s }}
+            </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="custom-size" placeholder="Custom size" style="width:180px">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addSize()">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMAGES -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Images</span></div>
+      <div class="card-body">
+        {% if product.images %}
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          {% for img in product.images %}
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+            <img src="{{ url_for('static', filename='images/' + img.filename) }}"
+                 style="width:80px;height:100px;object-fit:cover;border-radius:8px;
+                        border:2px solid {{ 'rgba(184,255,87,0.5)' if img.is_primary else 'rgba(255,255,255,0.1)' }}">
+            {% if img.is_primary %}
+              <div style="font-size:0.65rem;font-weight:700;color:var(--lime)">PRIMARY</div>
+            {% else %}
+              <form method="POST"
+                    action="{{ url_for('admin.set_primary_image', image_id=img.id) }}">
+                <button type="submit" class="btn btn-sm"
+                  style="font-size:0.65rem;padding:3px 8px;
+                         background:rgba(0,207,255,0.1);color:var(--sky);
+                         border:1px solid rgba(0,207,255,0.2)">Set Primary</button>
+              </form>
+            {% endif %}
+            <form method="POST"
+                  action="{{ url_for('admin.delete_image', image_id=img.id) }}">
+              <button type="submit" class="btn btn-danger btn-sm"
+                      style="font-size:0.65rem;padding:3px 8px;width:100%"
+                      onclick="return confirm('Delete this image?')">Delete</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label class="form-label">Add More Images</label>
+          <input type="file" name="images" accept="image/*" multiple
+                 style="background:rgba(255,255,255,0.04);padding:10px;border-radius:8px;
+                        border:1px dashed rgba(255,255,255,0.15)">
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px">
+      <button type="submit" class="btn btn-fire btn-lg">Save Changes</button>
+      <a href="{{ url_for('admin.products') }}" class="btn btn-ghost btn-lg">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+// ── KINDS ──────────────────────────────────────────────────────
+const kindsData = {
+  {% for t in types %}
+  {{ t.id }}: [{% for k in t.kinds %}{"id":{{ k.id }},"name":"{{ k.name }}"}{% if not loop.last %},{% endif %}{% endfor %}],
+  {% endfor %}
+};
+function loadKinds(typeId) {
+  const sel = document.getElementById('kind-sel');
+  sel.innerHTML = '<option value="">None</option>';
+  (kindsData[typeId] || []).forEach(k => {
+    const o = document.createElement('option');
+    o.value = k.id; o.textContent = k.name;
+    sel.appendChild(o);
+  });
+}
+
+// ── COLORS ─────────────────────────────────────────────────────
+let colorCount = 100; // start high to avoid id collisions with existing rows
+
+function updatePreview(input, previewId) {
+  const el = document.getElementById(previewId);
+  if (el) el.style.background = input.value.trim() || '#cccccc';
+}
+
+function addColor(name = '', hex = '') {
+  const id  = 'color-new-' + colorCount;
+  const pid = 'preview-' + id;
+  colorCount++;
+
+  const div = document.createElement('div');
+  div.className = 'color-row';
+  div.id = id;
+  div.style.cssText = 'opacity:0;transform:translateY(8px);transition:opacity 0.25s,transform 0.25s';
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="${pid}"
+           style="width:36px;height:36px;border-radius:50%;
+                  border:2px solid rgba(255,255,255,0.2);
+                  background:${hex || '#cccccc'};
+                  flex-shrink:0;transition:background 0.2s"></div>
+      <input type="text" name="colors[]"
+             value="${name}"
+             placeholder="e.g. Black, Red, #1a1a1a"
+             style="flex:1"
+             oninput="updatePreview(this,'${pid}')">
+      <button type="button" class="btn btn-danger btn-sm"
+              onclick="removeColor('${id}')">Remove</button>
+    </div>`;
+
+  document.getElementById('colors-container').appendChild(div);
+  requestAnimationFrame(() => {
+    div.style.opacity = '1';
+    div.style.transform = 'translateY(0)';
+  });
+}
+
+function removeColor(id) {
+  const rows = document.querySelectorAll('.color-row');
+  if (rows.length <= 1) {
+    const input = document.querySelector('#' + id + ' input[name="colors[]"]');
+    const preview = document.querySelector('#' + id + ' [id^="preview"]');
+    if (input) input.value = '';
+    if (preview) preview.style.background = '#cccccc';
+    return;
+  }
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.transition = 'opacity 0.2s,transform 0.2s';
+  el.style.opacity = '0';
+  el.style.transform = 'translateX(-10px)';
+  setTimeout(() => el.remove(), 220);
+}
+
+function addColorFromSwatch(name, hex) {
+  const inputs = document.querySelectorAll('#colors-container input[name="colors[]"]');
+  for (const input of inputs) {
+    if (!input.value.trim()) {
+      input.value = name;
+      const row = input.closest('.color-row');
+      const preview = row.querySelector('[id^="preview"]');
+      if (preview) preview.style.background = hex;
+      return;
+    }
+  }
+  addColor(name, hex);
+}
+
+// ── SIZES ───────────────────────────────────────────────────────
+function addSize() {
+  const val = document.getElementById('custom-size').value.trim();
+  if (!val) return;
+  const label = document.createElement('label');
+  label.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.25);border-radius:8px;padding:6px 12px';
+  label.innerHTML = `<input type="checkbox" name="sizes" value="${val}" style="width:auto;accent-color:var(--coral)" checked> ${val}`;
+  document.getElementById('sizes-container').appendChild(label);
+  document.getElementById('custom-size').value = '';
+}
+</script>
+{% endblock %}

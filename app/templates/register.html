@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="auth-page" style="margin:-32px -32px;min-height:calc(100vh - 100px)">
+  <div class="auth-left">
+    <div class="auth-logo-wrap">
+      {% if admin and admin.logo_url is defined and admin.logo_url %}
+        <img src="{{ admin.logo_url }}" class="auth-logo">
+      {% endif %}
+    </div>
+    <h1 class="auth-heading">Join the<br>Collection.</h1>
+    <p class="auth-sub">Create your account and get access to exclusive drops, sale alerts, and order tracking.</p>
+    <div class="auth-features">
+      <div class="auth-feature">
+        <div class="auth-feature-icon" style="background:rgba(255,215,0,0.15)">🔔</div>
+        Price drop notifications
+      </div>
+      <div class="auth-feature">
+        <div class="auth-feature-icon" style="background:rgba(155,89,182,0.15)">💎</div>
+        Exclusive member access
+      </div>
+      <div class="auth-feature">
+        <div class="auth-feature-icon" style="background:rgba(0,207,255,0.15)">🚀</div>
+        Fast checkout experience
+      </div>
+    </div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-box">
+      <div class="auth-box-title">Create Account</div>
+      <div class="auth-box-sub">Fill in your details to get started</div>
+      <form method="POST">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="name" placeholder="Your full name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone (optional)</label>
+          <input type="tel" name="phone" placeholder="+234 ...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" placeholder="Choose a strong password" required>
+        </div>
+        <button type="submit" class="btn btn-fire btn-lg btn-full mt-3">Create Account →</button>
+      </form>
+      <p style="text-align:center;font-size:0.84rem;color:var(--muted);margin-top:20px">
+        Already have an account?
+        <a href="{{ url_for('base.login') }}" style="color:var(--coral);font-weight:700;text-decoration:none">Sign in</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

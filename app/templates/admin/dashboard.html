@@ -1,0 +1,59 @@
+{% extends "admin/layout.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total Products</div>
+    <div class="stat-value">{{ total_products }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pending Orders</div>
+    <div class="stat-value" style="color:var(--gold)">{{ pending_orders }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Confirmed Orders</div>
+    <div class="stat-value" style="color:var(--lime)">{{ confirmed_orders }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Recent Orders</span>
+    <a href="{{ url_for('admin.orders') }}" class="btn btn-ghost btn-sm">View All</a>
+  </div>
+  {% if recent_orders %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Order</th><th>Buyer</th><th>Total</th><th>Date</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for order in recent_orders %}
+        <tr>
+          <td style="font-family:'Syne',sans-serif;font-weight:700">#{{ order.id }}</td>
+          <td>
+            <div style="font-weight:500">{{ order.buyer.name }}</div>
+            <div style="font-size:0.78rem;color:var(--muted)">{{ order.buyer.email }}</div>
+          </td>
+          <td style="font-family:'Syne',sans-serif;font-weight:700;background:var(--g-fire);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+            ₦{{ "{:,.0f}".format(order.total) }}
+          </td>
+          <td style="color:var(--muted);font-size:0.82rem">{{ order.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <span class="tag {% if order.status == 'confirmed' %}tag-green{% elif order.status == 'rejected' %}tag-red{% else %}tag-gold{% endif %}">
+              {{ order.status | title }}
+            </span>
+          </td>
+          <td><a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="btn btn-ghost btn-sm">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body"><p style="color:var(--muted)">No orders yet.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

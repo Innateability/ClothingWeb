@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <title>{% block title %}{{ admin.name if admin else 'Store' }}{% endblock %}</title>
+</head>
+<body>
+
+<!-- MARQUEE -->
+<div class="marquee-bar">
+  <div class="marquee-track">
+    {% for _ in range(8) %}
+    <span>New Arrivals <span class="marquee-dot">✦</span></span>
+    <span>Free Returns <span class="marquee-dot">✦</span></span>
+    <span>Limited Editions <span class="marquee-dot">✦</span></span>
+    <span>Sale Items <span class="marquee-dot">✦</span></span>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="{{ url_for('base.index') }}" class="navbar-brand">
+    {% if admin and admin.logo_url is defined and admin.logo_url %}
+      <img src="{{ admin.logo_url }}" alt="Logo" class="navbar-logo">
+    {% endif %}
+    <span class="navbar-wordmark">{{ admin.name if admin else 'DRIP' }}</span>
+  </a>
+
+  <div class="navbar-links">
+    <a href="{{ url_for('base.index') }}">Shop</a>
+    {% if session.get('buyer_id') %}
+      <a href="{{ url_for('buyer.profile') }}">Account</a>
+      <a href="{{ url_for('base.orders') }}">Orders</a>
+      <a href="{{ url_for('base.logout') }}">Logout</a>
+    {% else %}
+      <a href="{{ url_for('base.login') }}">Login</a>
+      <a href="{{ url_for('base.register') }}">Register</a>
+    {% endif %}
+    <a href="{{ url_for('base.cart') }}" class="cart-link">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+      </svg>
+      Cart
+      {% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}
+    </a>
+  </div>
+</nav>
+
+<!-- ALERTS -->
+<div class="alerts-wrap">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">
+        {% if category == 'success' %}✓{% elif category == 'error' %}✕{% else %}⚠{% endif %}
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<div class="page">
+  {% block content %}{% endblock %}
+</div>
+
+<footer>
+  {{ admin.name if admin else 'Store' }} &mdash; All rights reserved &mdash; Made with ❤️
+</footer>
+
+</body>
+</html>
