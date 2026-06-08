@@ -1,29 +1,11 @@
 {% extends "layout.html" %}
 {% block title %}Register{% endblock %}
 {% block content %}
-<div class="auth-page" style="margin:-32px -32px;min-height:calc(100vh - 100px)">
+<div class="auth-page" style="margin:-32px -36px;min-height:calc(100vh - 100px)">
   <div class="auth-left">
-    <div class="auth-logo-wrap">
-      {% if admin and admin.logo_url is defined and admin.logo_url %}
-        <img src="{{ admin.logo_url }}" class="auth-logo">
-      {% endif %}
-    </div>
     <h1 class="auth-heading">Join the<br>Collection.</h1>
-    <p class="auth-sub">Create your account and get access to exclusive drops, sale alerts, and order tracking.</p>
-    <div class="auth-features">
-      <div class="auth-feature">
-        <div class="auth-feature-icon" style="background:rgba(255,215,0,0.15)">🔔</div>
-        Price drop notifications
-      </div>
-      <div class="auth-feature">
-        <div class="auth-feature-icon" style="background:rgba(155,89,182,0.15)">💎</div>
-        Exclusive member access
-      </div>
-      <div class="auth-feature">
-        <div class="auth-feature-icon" style="background:rgba(0,207,255,0.15)">🚀</div>
-        Fast checkout experience
-      </div>
-    </div>
+    <div class="auth-divider"></div>
+    <p class="auth-sub">Create your account and unlock exclusive drops, price alerts, wishlist saving, and fast checkout.</p>
   </div>
   <div class="auth-right">
     <div class="auth-box">
@@ -40,17 +22,22 @@
         </div>
         <div class="form-group">
           <label class="form-label">Phone (optional)</label>
-          <input type="tel" name="phone" placeholder="+234 ...">
+          <input type="tel" name="phone" placeholder="+234...">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
           <input type="password" name="password" placeholder="Choose a strong password" required>
         </div>
-        <button type="submit" class="btn btn-fire btn-lg btn-full mt-3">Create Account →</button>
+        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;line-height:1.6">
+          By registering you agree to our
+          <a href="{{ url_for('base.terms') }}" style="color:var(--purple)">Terms & Conditions</a>
+          and <a href="{{ url_for('base.privacy') }}" style="color:var(--purple)">Privacy Policy</a>.
+        </p>
+        <button type="submit" class="btn btn-purple btn-lg btn-full">Create Account →</button>
       </form>
-      <p style="text-align:center;font-size:0.84rem;color:var(--muted);margin-top:20px">
+      <p style="text-align:center;font-size:0.83rem;color:var(--muted);margin-top:18px">
         Already have an account?
-        <a href="{{ url_for('base.login') }}" style="color:var(--coral);font-weight:700;text-decoration:none">Sign in</a>
+        <a href="{{ url_for('base.login') }}" style="color:var(--purple);font-weight:700;text-decoration:none">Sign in</a>
       </p>
     </div>
   </div>

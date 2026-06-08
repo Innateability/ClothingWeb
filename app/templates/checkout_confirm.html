@@ -1,70 +1,69 @@
 {% extends "layout.html" %}
 {% block title %}Order #{{ order.id }}{% endblock %}
 {% block content %}
-<div style="max-width:640px;margin:0 auto">
+<div style="max-width:660px;margin:0 auto">
 
-  <!-- SUCCESS HEADER -->
-  <div style="text-align:center;margin-bottom:32px;animation:fadeUp 0.5s ease both">
+  <!-- HEADER -->
+  <div style="text-align:center;margin-bottom:28px;animation:fadeUp 0.5s ease both">
     {% if manual %}
-      <div style="font-size:3rem;margin-bottom:12px;animation:float 3s ease-in-out infinite">🛍️</div>
-      <h1 style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;
-                 letter-spacing:-0.02em;margin-bottom:6px">Order Placed!</h1>
-      <p style="color:var(--muted)">
-        Order #{{ order.id }} &mdash; {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}
-      </p>
+      <div style="font-size:3rem;margin-bottom:10px">🛍️</div>
+      <h1 style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px">Order Placed!</h1>
     {% else %}
-      <div style="font-size:3rem;margin-bottom:12px;animation:float 3s ease-in-out infinite">🎉</div>
-      <h1 style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;
-                 letter-spacing:-0.02em;margin-bottom:6px">Payment Confirmed!</h1>
-      <p style="color:var(--muted)">
-        Order #{{ order.id }} &mdash; {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}
-      </p>
-      {% if reference %}
-      <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">
-        Paystack Ref: <span style="font-family:'Syne',sans-serif;color:var(--lime)">{{ reference }}</span>
-      </p>
-      {% endif %}
+      <div style="font-size:3rem;margin-bottom:10px">🎉</div>
+      <h1 style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px">Payment Confirmed!</h1>
+    {% endif %}
+    <p style="color:var(--muted)">Order #{{ order.id }} — {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</p>
+  </div>
+
+  <!-- PAYMENT BOX -->
+  {% if manual %}
+  <div class="confirm-hero mb-4">
+    <div class="confirm-title">💳 Transfer Payment To</div>
+    <div style="color:rgba(255,255,255,0.5);font-size:0.88rem;margin-top:4px">{{ admin.bank_name if admin }}</div>
+    <div style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-top:4px">{{ admin.account_name if admin }}</div>
+    <div class="confirm-account">{{ admin.account_number if admin else 'N/A' }}</div>
+    <div class="confirm-amount">₦{{ "{:,.0f}".format(order.total) }}</div>
+    <div class="confirm-call">
+      📞 Call {{ admin.phone if admin else 'us' }} BEFORE &amp; AFTER payment
+    </div>
+    <div style="margin-top:14px">
+      <a href="{{ url_for('base.retry_payment', order_id=order.id) }}"
+         class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:rgba(255,255,255,0.25)">
+        🔄 Try Online Payment
+      </a>
+    </div>
+  </div>
+  {% else %}
+  <div class="confirm-hero mb-4" style="background:linear-gradient(135deg,#166534,#15803d)">
+    <div style="font-size:2.5rem;margin-bottom:10px">✅</div>
+    <div class="confirm-title" style="color:rgba(255,255,255,0.9)">Payment Verified</div>
+    <p style="color:rgba(255,255,255,0.55);font-size:0.88rem;margin-top:8px;margin-bottom:14px">
+      Your Paystack payment has been received and verified.
+    </p>
+    <div class="confirm-amount">₦{{ "{:,.0f}".format(order.total) }}</div>
+    {% if reference %}
+    <p style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-top:6px">Ref: {{ reference }}</p>
     {% endif %}
   </div>
+  {% endif %}
 
-  <!-- PAYSTACK SUCCESS BOX -->
-  {% if not manual %}
-  <div class="payment-hero" style="background:linear-gradient(135deg,rgba(184,255,87,0.08),rgba(0,207,255,0.08));
-       border:1px solid rgba(184,255,87,0.2);margin-bottom:28px">
-    <div style="font-size:2.5rem;margin-bottom:12px">✅</div>
-    <div class="payment-title" style="color:var(--lime)">Payment Successful</div>
-    <p style="color:rgba(255,255,255,0.55);font-size:0.9rem;margin-top:8px;margin-bottom:16px">
-      Your payment has been received and verified via Paystack.
-      Your order is now being processed.
-    </p>
-    <div class="payment-amount">₦{{ "{:,.0f}".format(order.total) }}</div>
-  </div>
-
-  <!-- MANUAL PAYMENT BOX (fallback) -->
-  {% else %}
-  <div class="payment-hero" style="margin-bottom:28px">
-    <div class="payment-title">💳 Make Payment To</div>
-    <div class="payment-bank">{{ admin.bank_name if admin }}</div>
-    <div style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:8px">
-      {{ admin.account_name if admin }}
-    </div>
-    <div class="payment-account-number">
-      {{ admin.account_number if admin else 'N/A' }}
-    </div>
-    <div class="payment-amount">Total: ₦{{ "{:,.0f}".format(order.total) }}</div>
-    <div class="call-alert">
-      📞 IMPORTANT: Call {{ admin.phone if admin else 'us' }} BEFORE &amp; AFTER making payment
-    </div>
-
-    <!-- RETRY PAYSTACK BUTTON -->
-    <div style="margin-top:16px">
-      <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:10px">
-        Or try paying online again:
-      </p>
-      <a href="{{ url_for('base.retry_payment', order_id=order.id) }}"
-         class="btn btn-fire">
-        🔄 Retry Online Payment
-      </a>
+  <!-- DELIVERY INFO -->
+  {% if order.status == 'confirmed' and order.estimated_delivery %}
+  <div class="card mb-4">
+    <div class="card-header"><span class="card-title">🚚 Delivery Information</span></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:8px;font-size:0.88rem">
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:130px">Estimated Delivery</span>
+        <span style="font-weight:700;color:var(--purple)">
+          {{ order.estimated_delivery.strftime('%A, %d %B %Y') }}
+        </span>
+      </div>
+      {% if order.delivery_address %}
+      <div style="display:flex;gap:8px">
+        <span style="color:var(--muted);min-width:130px">Deliver To</span>
+        <span>{{ order.delivery_address }}, {{ order.delivery_city }}, {{ order.delivery_state }}</span>
+      </div>
+      {% endif %}
     </div>
   </div>
   {% endif %}
@@ -75,25 +74,30 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Item</th><th>Size</th><th>Qty</th><th>Price</th></tr>
+          <tr><th>Item</th><th>Size</th><th>Color</th><th>Qty</th><th>Price</th></tr>
         </thead>
         <tbody>
           {% for item in order.items %}
           <tr>
             <td style="font-weight:600">{{ item.product.name }}</td>
             <td>{{ item.size or '—' }}</td>
+            <td>
+              {% if item.color %}
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="width:12px;height:12px;border-radius:50%;background:{{ item.color.lower() }};border:1px solid var(--border);display:inline-block"></span>
+                {{ item.color }}
+              </div>
+              {% else %}—{% endif %}
+            </td>
             <td>{{ item.quantity }}</td>
-            <td style="font-family:'Syne',sans-serif;font-weight:700">
+            <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--purple)">
               ₦{{ "{:,.0f}".format(item.price * item.quantity) }}
             </td>
           </tr>
           {% endfor %}
-          <tr style="background:rgba(255,77,77,0.06)">
-            <td colspan="3"
-                style="text-align:right;font-family:'Syne',sans-serif;
-                       font-weight:700;padding:14px 16px">Total</td>
-            <td style="font-family:'Syne',sans-serif;font-weight:800;
-                       font-size:1.05rem;color:var(--coral);padding:14px 16px">
+          <tr style="background:var(--purple-xs)">
+            <td colspan="4" style="text-align:right;font-family:'Syne',sans-serif;font-weight:700;padding:13px 14px">Total</td>
+            <td style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;color:var(--purple)">
               ₦{{ "{:,.0f}".format(order.total) }}
             </td>
           </tr>
@@ -102,23 +106,20 @@
     </div>
   </div>
 
-  <!-- STATUS TAG -->
-  <div style="margin-bottom:20px">
-    <span class="tag {% if order.status == 'confirmed' %}tag-green
-                     {% elif order.status == 'pending' %}tag-gold
-                     {% else %}tag-red{% endif %}"
-          style="font-size:0.82rem;padding:5px 14px">
+  <!-- STATUS -->
+  <div style="margin-bottom:18px">
+    <span class="tag {% if order.status == 'confirmed' %}tag-green{% elif order.status == 'rejected' %}tag-red{% else %}tag-purple{% endif %}"
+          style="font-size:0.78rem;padding:5px 14px">
       {% if order.status == 'confirmed' %}✓ Confirmed
       {% elif order.status == 'pending' %}⏳ Pending Payment
-      {% else %}✕ Rejected{% endif %}
+      {% elif order.status == 'rejected' %}✕ Rejected
+      {% else %}{{ order.status | title }}{% endif %}
     </span>
   </div>
 
-  <!-- ACTION BUTTONS -->
   <div style="display:flex;gap:12px;flex-wrap:wrap">
-    <a href="{{ url_for('base.orders') }}" class="btn btn-electric">View My Orders</a>
+    <a href="{{ url_for('base.orders') }}" class="btn btn-purple">View My Orders</a>
     <a href="{{ url_for('base.index') }}" class="btn btn-ghost">Continue Shopping</a>
   </div>
-
 </div>
 {% endblock %}

@@ -2,12 +2,21 @@ from app import db
 from datetime import datetime, timedelta
 
 
-# Many-to-many association table between Product and Color
 product_colors = db.Table(
     "product_colors",
     db.Column("product_id", db.Integer, db.ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
     db.Column("color_id",   db.Integer, db.ForeignKey("colors.id",   ondelete="CASCADE"), primary_key=True),
 )
+
+
+class StoreSettings(db.Model):
+    __tablename__ = "store_settings"
+    id                  = db.Column(db.Integer, primary_key=True)
+    delivery_days       = db.Column(db.Integer, default=3)
+    delivery_note       = db.Column(db.String(200), nullable=True)
+    terms               = db.Column(db.Text, nullable=True)
+    privacy_policy      = db.Column(db.Text, nullable=True)
+    refund_policy       = db.Column(db.Text, nullable=True)
 
 
 class Admin(db.Model):
@@ -27,14 +36,19 @@ class Admin(db.Model):
 
 class Buyer(db.Model):
     __tablename__ = "buyers"
-    id       = db.Column(db.Integer, primary_key=True)
-    email    = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(300), nullable=False)
-    name     = db.Column(db.String(150), nullable=False)
-    phone    = db.Column(db.String(30),  nullable=True)
+    id              = db.Column(db.Integer, primary_key=True)
+    email           = db.Column(db.String(150), unique=True, nullable=False)
+    password        = db.Column(db.String(300), nullable=False)
+    name            = db.Column(db.String(150), nullable=False)
+    phone           = db.Column(db.String(30),  nullable=True)
+    saved_address   = db.Column(db.String(300), nullable=True)
+    saved_city      = db.Column(db.String(100), nullable=True)
+    saved_state     = db.Column(db.String(100), nullable=True)
 
-    cart_items = db.relationship("CartItem", back_populates="buyer", cascade="all, delete-orphan")
-    orders     = db.relationship("Order",    back_populates="buyer", cascade="all, delete-orphan")
+    cart_items  = db.relationship("CartItem",     back_populates="buyer", cascade="all, delete-orphan")
+    orders      = db.relationship("Order",        back_populates="buyer", cascade="all, delete-orphan")
+    wishlist    = db.relationship("WishlistItem", back_populates="buyer", cascade="all, delete-orphan")
+    waitlist    = db.relationship("WaitlistItem", back_populates="buyer", cascade="all, delete-orphan")
 
 
 class ProductType(db.Model):
@@ -50,11 +64,7 @@ class ProductKind(db.Model):
     __tablename__ = "product_kinds"
     id              = db.Column(db.Integer, primary_key=True)
     name            = db.Column(db.String(100), nullable=False)
-    product_type_id = db.Column(
-        db.Integer,
-        db.ForeignKey("product_types.id", ondelete="CASCADE"),
-        nullable=False
-    )
+    product_type_id = db.Column(db.Integer, db.ForeignKey("product_types.id", ondelete="CASCADE"), nullable=False)
 
     product_type = db.relationship("ProductType", back_populates="kinds")
     products     = db.relationship("Product",     back_populates="kind")
@@ -94,6 +104,8 @@ class Product(db.Model):
     images       = db.relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
     cart_items   = db.relationship("CartItem",     back_populates="product")
     order_items  = db.relationship("OrderItem",    back_populates="product")
+    wishlist     = db.relationship("WishlistItem", back_populates="product", cascade="all, delete-orphan")
+    waitlist     = db.relationship("WaitlistItem", back_populates="product", cascade="all, delete-orphan")
     colors       = db.relationship("Color", secondary=product_colors, back_populates="products")
 
     def effective_price(self):
@@ -117,19 +129,51 @@ class Product(db.Model):
             return self.images[0].filename
         return None
 
+    def related_products(self, limit=4):
+        return Product.query.filter(
+            Product.id != self.id,
+            Product.is_active == True,
+            db.or_(
+                Product.product_type_id == self.product_type_id,
+                Product.gender == self.gender
+            )
+        ).order_by(db.func.random()).limit(limit).all()
+
 
 class ProductImage(db.Model):
     __tablename__ = "product_images"
     id         = db.Column(db.Integer, primary_key=True)
     filename   = db.Column(db.String(300), nullable=False)
     is_primary = db.Column(db.Boolean, default=False)
-    product_id = db.Column(
-        db.Integer,
-        db.ForeignKey("products.id", ondelete="CASCADE"),
-        nullable=False
-    )
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
 
     product = db.relationship("Product", back_populates="images")
+
+
+class WishlistItem(db.Model):
+    __tablename__ = "wishlist_items"
+    id         = db.Column(db.Integer, primary_key=True)
+    buyer_id   = db.Column(db.Integer, db.ForeignKey("buyers.id",   ondelete="CASCADE"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    added_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    buyer   = db.relationship("Buyer",   back_populates="wishlist")
+    product = db.relationship("Product", back_populates="wishlist")
+
+
+class WaitlistItem(db.Model):
+    __tablename__ = "waitlist_items"
+    id         = db.Column(db.Integer, primary_key=True)
+    buyer_id   = db.Column(db.Integer, db.ForeignKey("buyers.id",   ondelete="CASCADE"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    size       = db.Column(db.String(20),  nullable=True)
+    color      = db.Column(db.String(50),  nullable=True)
+    note       = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notified   = db.Column(db.Boolean, default=False)
+
+    buyer   = db.relationship("Buyer",   back_populates="waitlist")
+    product = db.relationship("Product", back_populates="waitlist")
 
 
 class CartItem(db.Model):
@@ -139,6 +183,7 @@ class CartItem(db.Model):
     product_id   = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
     quantity     = db.Column(db.Integer, default=1)
     size         = db.Column(db.String(20),     nullable=True)
+    color        = db.Column(db.String(50),     nullable=True)
     price_at_add = db.Column(db.Numeric(10, 2), nullable=False)
     added_at     = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at   = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(days=30))
@@ -156,12 +201,16 @@ class CartItem(db.Model):
 
 class Order(db.Model):
     __tablename__ = "orders"
-    id         = db.Column(db.Integer, primary_key=True)
-    buyer_id   = db.Column(db.Integer, db.ForeignKey("buyers.id", ondelete="CASCADE"), nullable=False)
-    total      = db.Column(db.Numeric(10, 2), nullable=False)
-    status     = db.Column(db.String(30), default="pending")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    notes      = db.Column(db.Text, nullable=True)
+    id               = db.Column(db.Integer, primary_key=True)
+    buyer_id         = db.Column(db.Integer, db.ForeignKey("buyers.id", ondelete="CASCADE"), nullable=False)
+    total            = db.Column(db.Numeric(10, 2), nullable=False)
+    status           = db.Column(db.String(30), default="pending")
+    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
+    notes            = db.Column(db.Text,    nullable=True)
+    delivery_address = db.Column(db.String(300), nullable=True)
+    delivery_city    = db.Column(db.String(100), nullable=True)
+    delivery_state   = db.Column(db.String(100), nullable=True)
+    estimated_delivery = db.Column(db.DateTime, nullable=True)
 
     buyer   = db.relationship("Buyer",     back_populates="orders")
     items   = db.relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
@@ -175,6 +224,7 @@ class OrderItem(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
     quantity   = db.Column(db.Integer, nullable=False)
     size       = db.Column(db.String(20),     nullable=True)
+    color      = db.Column(db.String(50),     nullable=True)
     price      = db.Column(db.Numeric(10, 2), nullable=False)
 
     order   = db.relationship("Order",   back_populates="items")

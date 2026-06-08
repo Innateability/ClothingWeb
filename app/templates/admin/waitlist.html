@@ -1,0 +1,78 @@
+{% extends "admin/layout.html" %}
+{% block title %}Waitlist{% endblock %}
+{% block page_title %}Waitlist{% endblock %}
+{% block content %}
+
+<div class="flex-between mb-4">
+  <p style="color:var(--muted);font-size:0.85rem">
+    {{ items|length }} customer{{ 's' if items|length != 1 }} waiting for out-of-stock items
+  </p>
+</div>
+
+{% if items %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Product</th>
+          <th>Size</th>
+          <th>Color</th>
+          <th>Note</th>
+          <th>Date</th>
+          <th>Stock</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ item.buyer.name }}</div>
+            <div style="font-size:0.75rem;color:var(--muted)">{{ item.buyer.email }}</div>
+          </td>
+          <td>
+            <a href="{{ url_for('admin.edit_product', product_id=item.product.id) }}"
+               style="color:var(--purple);font-weight:600;text-decoration:none">
+              {{ item.product.name }}
+            </a>
+          </td>
+          <td>{{ item.size or '—' }}</td>
+          <td>
+            {% if item.color %}
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="width:12px;height:12px;border-radius:50%;
+                           background:{{ item.color.lower() }};
+                           border:1px solid var(--border);display:inline-block"></span>
+              {{ item.color }}
+            </div>
+            {% else %}—{% endif %}
+          </td>
+          <td style="color:var(--muted);font-size:0.82rem">{{ item.note or '—' }}</td>
+          <td style="color:var(--muted);font-size:0.82rem">
+            {{ item.created_at.strftime('%d %b %Y') }}
+          </td>
+          <td>
+            {% if item.product.stock > 0 %}
+              <span class="tag tag-green">{{ item.product.stock }} in stock</span>
+            {% else %}
+              <span class="tag tag-red">Out of stock</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="empty-state">
+  <span class="empty-icon">🔔</span>
+  <div class="empty-title">No waitlist entries</div>
+  <p style="color:var(--muted);font-size:0.85rem">
+    Customers join the waitlist when a product is out of stock.
+  </p>
+</div>
+{% endif %}
+{% endblock %}

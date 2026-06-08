@@ -1,0 +1,138 @@
+{% extends "layout.html" %}
+{% block title %}Privacy Policy{% endblock %}
+{% block content %}
+<div style="max-width:760px;margin:0 auto">
+  <div style="margin-bottom:32px">
+    <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--purple);margin-bottom:8px">Legal</div>
+    <h1 style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-0.02em">Privacy Policy</h1>
+    <p style="color:var(--muted);font-size:0.85rem;margin-top:6px">Last updated: {{ now.strftime('%B %Y') if now else '2025' }}</p>
+  </div>
+
+  {% if settings and settings.privacy_policy %}
+  <div style="font-size:0.9rem;line-height:1.85;color:var(--text2)">{{ settings.privacy_policy | safe }}</div>
+  {% else %}
+  <div style="font-size:0.9rem;line-height:1.85;color:var(--text2)">
+
+    <div style="background:var(--purple-xs);border-left:3px solid var(--purple);padding:14px 18px;
+                border-radius:0 var(--radius) var(--radius) 0;margin-bottom:28px;font-size:0.85rem;color:var(--purple)">
+      This Privacy Policy explains how <strong>{{ admin.name if admin else '[Store Name]' }}</strong>
+      collects, uses, and protects your personal data in compliance with the
+      <strong>Nigeria Data Protection Regulation (NDPR) 2019</strong> and the
+      <strong>Nigeria Data Protection Act (NDPA) 2023</strong>.
+    </div>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">1. Data Controller</h3>
+    <p><strong>{{ admin.name if admin else '[Store Name]' }}</strong> is the Data Controller
+    responsible for your personal data. We are committed to protecting your privacy in
+    accordance with Nigerian data protection law, specifically the
+    <strong>Nigeria Data Protection Act (NDPA) 2023</strong> and the
+    <strong>Nigeria Data Protection Regulation (NDPR) 2019</strong> issued by the
+    National Information Technology Development Agency (NITDA).</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">2. What Personal Data We Collect</h3>
+    <p>We collect the following personal data when you register or place an order:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li><strong>Identity Data</strong> — your full name</li>
+      <li><strong>Contact Data</strong> — email address, phone number</li>
+      <li><strong>Delivery Data</strong> — street address, city, state</li>
+      <li><strong>Transaction Data</strong> — order details, items purchased, payment amounts</li>
+      <li><strong>Technical Data</strong> — IP address, browser type, session data (via cookies)</li>
+    </ul>
+    <p>We do not collect sensitive personal data such as financial account details or
+    government identification numbers.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">3. Lawful Basis for Processing</h3>
+    <p>We process your personal data on the following lawful bases under the NDPA 2023:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li><strong>Contract</strong> — to fulfil your orders and provide delivery</li>
+      <li><strong>Legitimate Interest</strong> — to improve our services and prevent fraud</li>
+      <li><strong>Consent</strong> — where you have opted in to communications</li>
+      <li><strong>Legal Obligation</strong> — where required by Nigerian law</li>
+    </ul>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">4. How We Use Your Data</h3>
+    <p>We use your personal data to:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li>Process and deliver your orders</li>
+      <li>Send order confirmations and delivery updates</li>
+      <li>Notify you when waitlisted items are back in stock</li>
+      <li>Handle returns and complaints</li>
+      <li>Improve your shopping experience</li>
+      <li>Comply with Nigerian legal and tax obligations</li>
+    </ul>
+    <p>We do <strong>not</strong> sell, rent, or share your personal data with third parties
+    for marketing purposes.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">5. Data Sharing</h3>
+    <p>We share your data only with trusted service providers who assist us in operating
+    our store, including:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li><strong>Paystack</strong> — for secure payment processing (they operate under their own NDPR-compliant privacy policy)</li>
+      <li><strong>Courier/Delivery Services</strong> — your name and address are shared with our delivery partners to fulfil orders</li>
+    </ul>
+    <p>All third parties are required to protect your data and use it only for the purpose
+    for which it was shared.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">6. Payment Security</h3>
+    <p>All online payments are processed securely through <strong>Paystack</strong>, a
+    PCI-DSS compliant payment processor. We do not store your card details on our servers.
+    All card transactions are encrypted using SSL technology.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">7. Cookies</h3>
+    <p>We use strictly necessary session cookies to keep you logged in and maintain your
+    cart. These cookies expire when you close your browser or log out. We do not use
+    advertising or tracking cookies. By using our website you consent to the use of
+    these essential cookies.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">8. Data Retention</h3>
+    <p>We retain your personal data for as long as your account is active or as needed
+    to provide our services. Order records are retained for a minimum of 6 years in
+    compliance with Nigerian tax and commercial law. You may request deletion of your
+    account at any time, subject to legal retention obligations.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">9. Your Rights Under the NDPA 2023</h3>
+    <p>As a data subject under Nigerian law, you have the right to:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li><strong>Access</strong> — request a copy of the personal data we hold about you</li>
+      <li><strong>Rectification</strong> — request correction of inaccurate or incomplete data</li>
+      <li><strong>Erasure</strong> — request deletion of your data where there is no legal basis to retain it</li>
+      <li><strong>Restriction</strong> — request that we limit how we use your data</li>
+      <li><strong>Portability</strong> — receive your data in a portable format</li>
+      <li><strong>Objection</strong> — object to processing based on legitimate interest</li>
+      <li><strong>Withdraw Consent</strong> — withdraw consent at any time where processing is consent-based</li>
+    </ul>
+    <p>To exercise any of these rights, contact us via the phone number on your order
+    confirmation. We will respond within 30 days as required by the NDPA 2023.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">10. Data Security</h3>
+    <p>We implement appropriate technical and organisational measures to protect your
+    personal data against unauthorised access, loss, or disclosure. All passwords are
+    stored in hashed form. Our website uses HTTPS encryption for all data in transit.
+    However, no method of transmission over the internet is 100% secure and we cannot
+    guarantee absolute security.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">11. Complaints</h3>
+    <p>If you believe your data protection rights have been violated, you have the right
+    to lodge a complaint with the <strong>Nigeria Data Protection Commission (NDPC)</strong>
+    at <strong>ndpc.gov.ng</strong> or the <strong>National Information Technology
+    Development Agency (NITDA)</strong> at <strong>nitda.gov.ng</strong>.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">12. Changes to This Policy</h3>
+    <p>We may update this privacy policy from time to time to reflect changes in our
+    practices or Nigerian data protection law. We will notify you of significant changes
+    by posting the updated policy on this page with a new effective date.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">13. Contact</h3>
+    <p>For any privacy-related queries or to exercise your data rights, contact us via
+    the phone number shown on your order confirmation.</p>
+
+  </div>
+  {% endif %}
+
+  <div style="margin-top:36px;padding-top:20px;border-top:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap">
+    <a href="{{ url_for('base.terms') }}"  class="btn btn-ghost btn-sm">Terms & Conditions</a>
+    <a href="{{ url_for('base.refund') }}" class="btn btn-ghost btn-sm">Refund Policy</a>
+    <a href="{{ url_for('base.index') }}"  class="btn btn-ghost btn-sm">← Back to Shop</a>
+  </div>
+</div>
+{% endblock %}

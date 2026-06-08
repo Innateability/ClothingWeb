@@ -1,18 +1,25 @@
 from flask import (Blueprint, render_template, request,
                    redirect, url_for, session, flash, jsonify)
 from app.models import (Buyer, Product, ProductType, ProductKind,
-                        CartItem, Order, OrderItem, Payment, Admin, Color)
+                        CartItem, Order, OrderItem, Payment, Admin,
+                        Color, WishlistItem, WaitlistItem, StoreSettings)
 from app import db
 from app.utils import clean_expired_cart_items
 from app.decorators import buyer_required
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 
 base_bp = Blueprint("base", __name__)
 
 
+# ── HELPERS ───────────────────────────────────────────────────
+
 def get_admin():
     return Admin.query.first()
+
+
+def get_settings():
+    return StoreSettings.query.first()
 
 
 def get_cart_count():
@@ -21,11 +28,32 @@ def get_cart_count():
     return 0
 
 
-# ── SHOP / HOME ───────────────────────────────────────────────
+def get_wishlist_count():
+    if session.get("buyer_id"):
+        return WishlistItem.query.filter_by(buyer_id=session["buyer_id"]).count()
+    return 0
+
+
+def delivery_date_str(settings):
+    days = settings.delivery_days if settings and settings.delivery_days else 3
+    return (datetime.utcnow() + timedelta(days=days)).strftime('%A, %d %B %Y')
+
+
+def base_ctx():
+    return dict(
+        admin=get_admin(),
+        settings=get_settings(),
+        cart_count=get_cart_count(),
+        wishlist_count=get_wishlist_count(),
+        now=datetime.utcnow(),
+    )
+
+
+# ── SHOP ──────────────────────────────────────────────────────
 
 @base_bp.route("/")
 def index():
-    admin  = get_admin()
+    ctx    = base_ctx()
     types  = ProductType.query.all()
     colors = Color.query.order_by(Color.name).all()
 
@@ -63,8 +91,6 @@ def index():
         products=products,
         types=types,
         colors=colors,
-        admin=admin,
-        cart_count=get_cart_count(),
         selected_type_id=type_id,
         selected_kind_id=kind_id,
         selected_gender=gender,
@@ -73,17 +99,29 @@ def index():
         max_price=max_price,
         selected_size=size,
         on_sale=on_sale,
+        **ctx
     )
 
 
 @base_bp.route("/product/<int:product_id>")
 def product_detail(product_id):
     product = db.get_or_404(Product, product_id)
-    admin   = get_admin()
+    related = product.related_products(limit=4)
+    ctx     = base_ctx()
+
+    # ✅ FIXED: just CHECK if in wishlist — do NOT delete it
+    in_wishlist = False
+    if session.get("buyer_id"):
+        in_wishlist = WishlistItem.query.filter_by(
+            buyer_id=session["buyer_id"],
+            product_id=product_id
+        ).first() is not None
+
     return render_template("product_detail.html",
         product=product,
-        admin=admin,
-        cart_count=get_cart_count()
+        related=related,
+        in_wishlist=in_wishlist,
+        **ctx
     )
 
 
@@ -108,10 +146,8 @@ def register():
             return redirect(url_for("base.register"))
 
         buyer = Buyer(
-            name=name,
-            email=email,
-            password=generate_password_hash(password),
-            phone=phone
+            name=name, email=email,
+            password=generate_password_hash(password), phone=phone
         )
         db.session.add(buyer)
         db.session.commit()
@@ -121,8 +157,7 @@ def register():
         flash("Account created! Welcome.", "success")
         return redirect(url_for("base.index"))
 
-    admin = get_admin()
-    return render_template("register.html", admin=admin, cart_count=0)
+    return render_template("register.html", **base_ctx())
 
 
 @base_bp.route("/login", methods=["GET", "POST"])
@@ -141,8 +176,7 @@ def login():
         flash("Welcome back!", "success")
         return redirect(request.args.get("next") or url_for("base.index"))
 
-    admin = get_admin()
-    return render_template("login.html", admin=admin, cart_count=0)
+    return render_template("login.html", **base_ctx())
 
 
 @base_bp.route("/logout")
@@ -159,17 +193,17 @@ def logout():
 @buyer_required
 def cart():
     buyer_id = session["buyer_id"]
-
-    removed = clean_expired_cart_items(buyer_id)
+    removed  = clean_expired_cart_items(buyer_id)
     if removed:
-        flash(f"{removed} expired item(s) removed from your cart.", "warning")
+        flash(f"{removed} expired item(s) removed.", "warning")
 
-    items = (CartItem.query.join(Product).filter(CartItem.buyer_id == buyer_id,Product.is_active.is_(True)).all())
-    admin = get_admin()
+    items    = CartItem.query.filter_by(buyer_id=buyer_id).all()
+    settings = get_settings()
+    ctx      = base_ctx()
     return render_template("cart.html",
         items=items,
-        admin=admin,
-        cart_count=len(items)
+        delivery_date=delivery_date_str(settings),
+        **ctx
     )
 
 
@@ -183,56 +217,420 @@ def add_to_cart(product_id):
     product  = db.get_or_404(Product, product_id)
     buyer_id = session["buyer_id"]
     size     = request.form.get("size")
+    color    = request.form.get("color")
     quantity = int(request.form.get("quantity", 1))
 
-    # Check stock availability
     if product.stock < 1:
         flash(f'"{product.name}" is out of stock.', "error")
-        return redirect(request.referrer or url_for("base.index"))
+        return redirect(url_for("base.product_detail", product_id=product_id))
 
     existing = CartItem.query.filter_by(
-        buyer_id=buyer_id,
-        product_id=product_id,
-        size=size
+        buyer_id=buyer_id, product_id=product_id, size=size
     ).first()
 
-    # Don't allow adding more than available stock
     already_in_cart = existing.quantity if existing else 0
     if already_in_cart + quantity > product.stock:
         quantity = product.stock - already_in_cart
         if quantity <= 0:
-            flash(f'You already have the max available stock of "{product.name}" in your cart.', "warning")
-            return redirect(request.referrer or url_for("base.index"))
-        flash(f'Only {quantity} more unit(s) available — cart updated.', "warning")
+            flash(f'Max stock already in cart.', "warning")
+            return redirect(url_for("base.cart"))
+        flash(f'Only {quantity} more available. Cart updated.', "warning")
 
     if existing:
         existing.quantity += quantity
     else:
-        item = CartItem(
-            buyer_id=buyer_id,
-            product_id=product_id,
-            quantity=quantity,
-            size=size,
+        db.session.add(CartItem(
+            buyer_id=buyer_id, product_id=product_id,
+            quantity=quantity, size=size, color=color,
             price_at_add=product.effective_price(),
-        )
-        db.session.add(item)
+        ))
 
     db.session.commit()
     flash(f'"{product.name}" added to cart.', "success")
-    return redirect(request.referrer or url_for("base.index"))
+    # ✅ Always redirect to cart after adding
+    return redirect(url_for("base.cart"))
 
 
 @base_bp.route("/cart/remove/<int:item_id>", methods=["POST"])
 @buyer_required
 def remove_from_cart(item_id):
     item = db.get_or_404(CartItem, item_id)
-    if item.buyer_id != session.get("buyer_id"):
+    if item.buyer_id != session["buyer_id"]:
         flash("Unauthorized.", "error")
         return redirect(url_for("base.cart"))
     db.session.delete(item)
     db.session.commit()
-    flash("Item removed from cart.", "success")
+    flash("Item removed.", "success")
     return redirect(url_for("base.cart"))
+
+
+@base_bp.route("/cart/move-to-wishlist/<int:item_id>", methods=["POST"])
+@buyer_required
+def move_to_wishlist(item_id):
+    item = db.get_or_404(CartItem, item_id)
+    if item.buyer_id != session["buyer_id"]:
+        flash("Unauthorized.", "error")
+        return redirect(url_for("base.cart"))
+
+    existing = WishlistItem.query.filter_by(
+        buyer_id=session["buyer_id"], product_id=item.product_id
+    ).first()
+
+    if not existing:
+        db.session.add(WishlistItem(
+            buyer_id=session["buyer_id"], product_id=item.product_id
+        ))
+
+    db.session.delete(item)
+    db.session.commit()
+    flash("Moved to wishlist.", "success")
+    return redirect(url_for("base.cart"))
+
+
+# ── WISHLIST ──────────────────────────────────────────────────
+
+@base_bp.route("/wishlist")
+@buyer_required
+def wishlist():
+    buyer_id = session["buyer_id"]
+    items    = WishlistItem.query.filter_by(buyer_id=buyer_id).order_by(
+        WishlistItem.added_at.desc()
+    ).all()
+    return render_template("wishlist.html", items=items, **base_ctx())
+
+
+@base_bp.route("/wishlist/add/<int:product_id>", methods=["POST", "GET"])
+@buyer_required
+def add_to_wishlist(product_id):
+    buyer_id = session["buyer_id"]
+    is_ajax  = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+    existing = WishlistItem.query.filter_by(
+        buyer_id=buyer_id, product_id=product_id
+    ).first()
+
+    if existing:
+        # Toggle off — remove from wishlist
+        db.session.delete(existing)
+        db.session.commit()
+        if is_ajax:
+            return jsonify({"status": "removed", "message": "Removed from wishlist"})
+        flash("Removed from wishlist.", "success")
+    else:
+        # Add to wishlist
+        db.session.add(WishlistItem(buyer_id=buyer_id, product_id=product_id))
+        db.session.commit()
+        if is_ajax:
+            return jsonify({"status": "added", "message": "Added to wishlist ♡"})
+        flash("Added to wishlist ♡", "success")
+
+    return redirect(request.referrer or url_for("base.index"))
+
+
+@base_bp.route("/wishlist/remove/<int:item_id>", methods=["POST"])
+@buyer_required
+def remove_from_wishlist(item_id):
+    item = db.get_or_404(WishlistItem, item_id)
+    if item.buyer_id != session["buyer_id"]:
+        flash("Unauthorized.", "error")
+        return redirect(url_for("base.wishlist"))
+    db.session.delete(item)
+    db.session.commit()
+    flash("Removed from wishlist.", "success")
+    return redirect(url_for("base.wishlist"))
+
+
+@base_bp.route("/wishlist/move-to-cart/<int:item_id>", methods=["POST"])
+@buyer_required
+def move_to_cart(item_id):
+    item    = db.get_or_404(WishlistItem, item_id)
+    product = item.product
+
+    if item.buyer_id != session["buyer_id"]:
+        flash("Unauthorized.", "error")
+        return redirect(url_for("base.wishlist"))
+
+    if product.stock < 1:
+        flash(f'"{product.name}" is out of stock.', "error")
+        return redirect(url_for("base.wishlist"))
+
+    # If product has multiple sizes OR colors send to product page to choose
+    has_sizes  = len(product.get_sizes()) > 1
+    has_colors = len(product.colors) > 1
+
+    if has_sizes or has_colors:
+        flash(
+            f'Please select your size/color for "{product.name}" before adding to cart.',
+            "warning"
+        )
+        return redirect(url_for("base.product_detail", product_id=product.id))
+
+    # No choices needed — add directly
+    buyer_id = session["buyer_id"]
+    size     = product.get_sizes()[0] if product.get_sizes() else None
+    color    = product.colors[0].name if product.colors else None
+
+    existing = CartItem.query.filter_by(
+        buyer_id=buyer_id, product_id=product.id, size=size
+    ).first()
+
+    if existing:
+        if existing.quantity < product.stock:
+            existing.quantity += 1
+        else:
+            flash(f'Max stock already in cart for "{product.name}".', "warning")
+            return redirect(url_for("base.wishlist"))
+    else:
+        db.session.add(CartItem(
+            buyer_id=buyer_id,
+            product_id=product.id,
+            quantity=1,
+            size=size,
+            color=color,
+            price_at_add=product.effective_price()
+        ))
+
+    db.session.delete(item)
+    db.session.commit()
+    flash(f'"{product.name}" moved to cart.', "success")
+    return redirect(url_for("base.wishlist"))
+
+
+# ── WAITLIST ──────────────────────────────────────────────────
+
+@base_bp.route("/waitlist/join/<int:product_id>", methods=["POST"])
+@buyer_required
+def join_waitlist(product_id):
+    buyer_id = session["buyer_id"]
+    existing = WaitlistItem.query.filter_by(
+        buyer_id=buyer_id, product_id=product_id
+    ).first()
+
+    if existing:
+        flash("You're already on the waitlist for this item.", "warning")
+        return redirect(request.referrer or url_for("base.index"))
+
+    db.session.add(WaitlistItem(
+        buyer_id=buyer_id,
+        product_id=product_id,
+        size=request.form.get("size"),
+        color=request.form.get("color"),
+        note=request.form.get("note"),
+    ))
+    db.session.commit()
+    flash("You're on the waitlist! We'll notify you when it's back in stock.", "success")
+    return redirect(request.referrer or url_for("base.index"))
+
+
+# ── CHECKOUT ──────────────────────────────────────────────────
+
+@base_bp.route("/checkout", methods=["POST"])
+@buyer_required
+def checkout():
+    buyer_id     = session["buyer_id"]
+    selected_ids = request.form.getlist("selected_items")
+
+    if not selected_ids:
+        flash("Please select at least one item.", "error")
+        return redirect(url_for("base.cart"))
+
+    items = CartItem.query.filter(
+        CartItem.id.in_(selected_ids),
+        CartItem.buyer_id == buyer_id
+    ).all()
+
+    if not items:
+        flash("No valid items selected.", "error")
+        return redirect(url_for("base.cart"))
+
+    settings = get_settings()
+    total    = sum(float(i.product.effective_price()) * i.quantity for i in items)
+
+    session["checkout_ids"]   = [i.id for i in items]
+    session["checkout_total"] = float(total)
+    session["checkout_notes"] = request.form.get("notes", "")
+
+    buyer = db.get_or_404(Buyer, buyer_id)
+    return render_template("checkout_address.html",
+        items=items,
+        total=total,
+        selected_ids=selected_ids,
+        notes=request.form.get("notes", ""),
+        buyer=buyer,
+        delivery_date=delivery_date_str(settings),
+        **base_ctx()
+    )
+
+
+@base_bp.route("/checkout/confirm-address", methods=["POST"])
+@buyer_required
+def checkout_confirm_address():
+    buyer_id = session["buyer_id"]
+    buyer    = db.get_or_404(Buyer, buyer_id)
+    admin    = get_admin()
+    settings = get_settings()
+
+    selected_ids     = request.form.getlist("selected_items")
+    delivery_address = request.form.get("delivery_address", "").strip()
+    delivery_city    = request.form.get("delivery_city", "").strip()
+    delivery_state   = request.form.get("delivery_state", "").strip()
+    notes            = request.form.get("notes", "")
+    save_address     = request.form.get("save_address") == "1"
+
+    if not delivery_address or not delivery_city:
+        flash("Please enter a delivery address.", "error")
+        return redirect(url_for("base.checkout"))
+
+    if save_address:
+        buyer.saved_address = delivery_address
+        buyer.saved_city    = delivery_city
+        buyer.saved_state   = delivery_state
+        db.session.commit()
+
+    items = CartItem.query.filter(
+        CartItem.id.in_(selected_ids),
+        CartItem.buyer_id == buyer_id
+    ).all()
+
+    total = sum(float(i.product.effective_price()) * i.quantity for i in items)
+
+    delivery_days      = settings.delivery_days if settings and settings.delivery_days else 3
+    estimated_delivery = datetime.utcnow() + timedelta(days=delivery_days)
+
+    order = Order(
+        buyer_id=buyer_id,
+        total=total,
+        status="pending",
+        notes=notes,
+        delivery_address=delivery_address,
+        delivery_city=delivery_city,
+        delivery_state=delivery_state,
+        estimated_delivery=None,  # set only after payment confirmed
+    )
+    db.session.add(order)
+    db.session.flush()
+
+    for item in items:
+        db.session.add(OrderItem(
+            order_id=order.id,
+            product_id=item.product_id,
+            quantity=item.quantity,
+            size=item.size,
+            color=item.color,
+            price=item.product.effective_price(),
+        ))
+        item.product.stock = max(0, item.product.stock - item.quantity)
+        db.session.delete(item)
+
+    db.session.add(Payment(
+        order_id=order.id,
+        admin_id=admin.id,
+        amount=total,
+    ))
+    db.session.commit()
+
+    try:
+        from app.paystack import initialize_payment
+        callback_url = url_for("base.payment_callback", _external=True)
+        auth_url, reference = initialize_payment(
+            email=buyer.email,
+            amount_naira=total,
+            order_id=order.id,
+            callback_url=callback_url,
+        )
+        if auth_url:
+            session["paystack_ref"]     = reference
+            session["pending_order_id"] = order.id
+            return redirect(auth_url)
+    except Exception:
+        pass
+
+    flash("Pay via bank transfer to complete your order.", "warning")
+    return render_template("checkout_confirm.html",
+        order=order, manual=True, reference=None, **base_ctx()
+    )
+
+
+# ── PAYMENT CALLBACK ──────────────────────────────────────────
+
+@base_bp.route("/payment/callback")
+@buyer_required
+def payment_callback():
+    from app.paystack import verify_payment
+
+    reference = request.args.get("reference") or session.get("paystack_ref")
+    order_id  = session.get("pending_order_id")
+
+    if not reference or not order_id:
+        flash("Invalid payment session.", "error")
+        return redirect(url_for("base.orders"))
+
+    order         = db.session.get(Order, order_id)
+    success, data = verify_payment(reference)
+
+    if success:
+        order.status = "confirmed"
+        if order.payment:
+            order.payment.confirmed    = True
+            order.payment.confirmed_at = datetime.utcnow()
+            order.payment.buyer_note   = f"Paystack Ref: {reference}"
+
+        # ✅ Calculate delivery from time of payment confirmation
+        settings = get_settings()
+        delivery_days = settings.delivery_days if settings and settings.delivery_days else 3
+        order.estimated_delivery = datetime.utcnow() + timedelta(days=delivery_days)
+
+        db.session.commit()
+        session.pop("paystack_ref",     None)
+        session.pop("pending_order_id", None)
+        flash("Payment confirmed! 🎉", "success")
+        return render_template("checkout_confirm.html",
+            order=order, manual=False, reference=reference, **base_ctx()
+        )
+    else:
+        order.status = "failed"
+        db.session.commit()
+        flash("Payment failed. Please try again.", "error")
+        return render_template("checkout_confirm.html",
+            order=order, manual=True, reference=None, **base_ctx()
+        )
+
+
+@base_bp.route("/payment/retry/<int:order_id>")
+@buyer_required
+def retry_payment(order_id):
+    from app.paystack import initialize_payment
+    order = db.get_or_404(Order, order_id)
+    buyer = db.get_or_404(Buyer, session["buyer_id"])
+
+    if order.buyer_id != session["buyer_id"]:
+        flash("Unauthorized.", "error")
+        return redirect(url_for("base.orders"))
+
+    if order.status == "confirmed":
+        flash("Already paid.", "success")
+        return redirect(url_for("base.orders"))
+
+    try:
+        callback_url = url_for("base.payment_callback", _external=True)
+        auth_url, reference = initialize_payment(
+            email=buyer.email,
+            amount_naira=order.total,
+            order_id=order.id,
+            callback_url=callback_url,
+        )
+        if auth_url:
+            session["paystack_ref"]     = reference
+            session["pending_order_id"] = order.id
+            return redirect(auth_url)
+    except Exception:
+        pass
+
+    flash("Could not connect to payment. Please pay via bank transfer.", "warning")
+    return render_template("checkout_confirm.html",
+        order=order, manual=True, reference=None, **base_ctx()
+    )
+
 
 # ── ORDERS ────────────────────────────────────────────────────
 
@@ -243,267 +641,21 @@ def orders():
     all_orders = Order.query.filter_by(buyer_id=buyer_id).order_by(
         Order.created_at.desc()
     ).all()
-    admin = get_admin()
-    return render_template("orders.html",
-        orders=all_orders,
-        admin=admin,
-        cart_count=get_cart_count()
-    ) 
- 
-@base_bp.route("/checkout", methods=["POST"])
-@buyer_required
-def checkout():
-    buyer_id     = session["buyer_id"]
-    selected_ids = request.form.getlist("selected_items")
- 
-    if not selected_ids:
-        flash("Please select at least one item to checkout.", "error")
-        return redirect(url_for("base.cart"))
- 
-    items = CartItem.query.filter(
-        CartItem.id.in_(selected_ids),
-        CartItem.buyer_id == buyer_id
-    ).all()
- 
-    if not items:
-        flash("No valid items selected.", "error")
-        return redirect(url_for("base.cart"))
- 
-    admin = get_admin()
-    if not admin:
-        flash("Store not configured yet.", "error")
-        return redirect(url_for("base.cart"))
- 
-    buyer = db.get_or_404(Buyer, buyer_id)
- 
-    total = sum(
-        float(item.product.effective_price()) * item.quantity
-        for item in items
-    )
- 
-    # Create order in DB
-    order = Order(
-        buyer_id=buyer_id,
-        total=total,
-        status="pending",
-        notes=request.form.get("notes")
-    )
-    db.session.add(order)
-    db.session.flush()
- 
-    for item in items:
-        oi = OrderItem(
-            order_id=order.id,
-            product_id=item.product_id,
-            quantity=item.quantity,
-            size=item.size,
-            price=item.product.effective_price(),
-        )
-        db.session.add(oi)
-        db.session.delete(item)
- 
-    payment = Payment(
-        order_id=order.id,
-        admin_id=admin.id,
-        amount=total,
-    )
-    db.session.add(payment)
-    db.session.commit()
- 
-    # Initialize Paystack payment
-    from app.paystack import initialize_payment
- 
-    callback_url = url_for("base.payment_callback", _external=True)
- 
-    auth_url, reference = initialize_payment(
-        email=buyer.email,
-        amount_naira=total,
-        order_id=order.id,
-        callback_url=callback_url,
-        metadata={
-            "order_id":    order.id,
-            "buyer_name":  buyer.name,
-            "buyer_email": buyer.email,
-        }
-    )
- 
-    if auth_url:
-        session["paystack_ref"]     = reference
-        session["pending_order_id"] = order.id
-        return redirect(auth_url)
-    else:
-        # Paystack unreachable — show manual payment page
-        flash("Online payment unavailable. Please pay manually.", "warning")
-        return render_template("checkout_confirm.html",
-            order=order,
-            admin=admin,
-            cart_count=0,
-            manual=True,
-            reference=None
-        )
- 
- 
-@base_bp.route("/payment/callback")
-@buyer_required
-def payment_callback():
-    """
-    Paystack redirects buyer here after payment.
-    Verifies the transaction and updates order status.
-    """
-    from app.paystack import verify_payment
-    from datetime import datetime
- 
-    reference = request.args.get("reference") or session.get("paystack_ref")
-    order_id  = session.get("pending_order_id")
- 
-    if not reference or not order_id:
-        flash("Invalid payment session.", "error")
-        return redirect(url_for("base.orders"))
- 
-    order = db.session.get(Order, order_id)
-    if not order:
-        flash("Order not found.", "error")
-        return redirect(url_for("base.orders"))
- 
-    success, data = verify_payment(reference)
- 
-    if success:
-        order.status = "confirmed"
- 
-        if order.payment:
-            order.payment.confirmed    = True
-            order.payment.confirmed_at = datetime.utcnow()
-            order.payment.buyer_note   = f"Paid via Paystack. Ref: {reference}"
- 
-        # Deduct stock for each ordered item
-        for item in order.items:
-            product = item.product
-            if product:
-                if product.stock >= item.quantity:
-                    product.stock -= item.quantity
-                else:
-                    product.stock = 0
- 
-        db.session.commit()
- 
-        session.pop("paystack_ref",     None)
-        session.pop("pending_order_id", None)
- 
-        flash("Payment successful! Your order is confirmed. 🎉", "success")
-        return render_template("checkout_confirm.html",
-            order=order,
-            admin=get_admin(),
-            cart_count=0,
-            manual=False,
-            reference=reference
-        )
- 
-    else:
-        # Payment failed or cancelled
-        order.status = "failed"
-        db.session.commit()
- 
-        session.pop("paystack_ref",     None)
-        session.pop("pending_order_id", None)
- 
-        flash("Payment was not completed. Please try again.", "error")
-        return render_template("checkout_confirm.html",
-            order=order,
-            admin=get_admin(),
-            cart_count=0,
-            manual=True,
-            reference=None
-        )
- 
- 
-@base_bp.route("/payment/retry/<int:order_id>")
-@buyer_required
-def retry_payment(order_id):
-    """
-    Lets buyer retry Paystack payment for a pending/failed order.
-    """
-    from app.paystack import initialize_payment
- 
-    order = db.get_or_404(Order, order_id)
-    buyer = db.get_or_404(Buyer, session["buyer_id"])
- 
-    # Only allow retry if order belongs to this buyer
-    if order.buyer_id != session["buyer_id"]:
-        flash("Unauthorized.", "error")
-        return redirect(url_for("base.orders"))
- 
-    # Only retry pending or failed orders
-    if order.status == "confirmed":
-        flash("This order has already been paid.", "success")
-        return redirect(url_for("base.orders"))
- 
-    callback_url = url_for("base.payment_callback", _external=True)
- 
-    auth_url, reference = initialize_payment(
-        email=buyer.email,
-        amount_naira=order.total,
-        order_id=order.id,
-        callback_url=callback_url,
-        metadata={
-            "order_id":    order.id,
-            "buyer_name":  buyer.name,
-            "buyer_email": buyer.email,
-            "retry":       True,
-        }
-    )
- 
-    if auth_url:
-        session["paystack_ref"]     = reference
-        session["pending_order_id"] = order.id
-        return redirect(auth_url)
-    else:
-        flash("Could not connect to payment gateway. Please try later.", "error")
-        return redirect(url_for("base.orders"))
- 
- 
-@base_bp.route("/payment/webhook", methods=["POST"])
-def paystack_webhook():
-    """
-    Paystack sends payment events here automatically.
-    Use this to confirm payments server-side even if
-    the buyer closes the browser before the callback.
-    Set this URL in your Paystack dashboard → API → Webhooks
-    """
-    import hmac
-    import hashlib
-    import json
-    from datetime import datetime
- 
-    secret = os.getenv("PAYSTACK_SECRET_KEY", "")
- 
-    # Verify the webhook signature
-    signature = request.headers.get("X-Paystack-Signature", "")
-    body      = request.get_data()
-    expected  = hmac.new(
-        secret.encode("utf-8"),
-        body,
-        hashlib.sha512
-    ).hexdigest()
- 
-    if signature != expected:
-        return {"status": "unauthorized"}, 401
- 
-    event = json.loads(body)
- 
-    if event.get("event") == "charge.success":
-        data      = event["data"]
-        reference = data.get("reference", "")
-        meta      = data.get("metadata", {})
-        order_id  = meta.get("order_id")
- 
-        if order_id:
-            order = db.session.get(Order, int(order_id))
-            if order and order.status != "confirmed":
-                order.status = "confirmed"
-                if order.payment:
-                    order.payment.confirmed    = True
-                    order.payment.confirmed_at = datetime.utcnow()
-                    order.payment.buyer_note   = f"Paystack webhook. Ref: {reference}"
-                db.session.commit()
- 
-    return {"status": "ok"}, 200
+    return render_template("orders.html", orders=all_orders, **base_ctx())
+
+
+# ── LEGAL PAGES ───────────────────────────────────────────────
+
+@base_bp.route("/terms")
+def terms():
+    return render_template("terms.html", **base_ctx())
+
+
+@base_bp.route("/privacy")
+def privacy():
+    return render_template("privacy.html", **base_ctx())
+
+
+@base_bp.route("/refund")
+def refund():
+    return render_template("refund.html", **base_ctx())

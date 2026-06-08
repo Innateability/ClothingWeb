@@ -6,7 +6,7 @@ from app import db
 from app.utils import save_image
 from app.decorators import admin_required
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -85,10 +85,12 @@ def setup():
 @admin_bp.route("/")
 @admin_required
 def dashboard():
+    from app.models import WaitlistItem
     admin            = get_admin()
-    total_products   = Product.query.filter_by(is_active=True).count()
+    total_products   = Product.query.count()
     pending_orders   = Order.query.filter_by(status="pending").count()
     confirmed_orders = Order.query.filter_by(status="confirmed").count()
+    waitlist_count   = WaitlistItem.query.filter_by(notified=False).count()
     recent_orders    = Order.query.order_by(Order.created_at.desc()).limit(10).all()
 
     return render_template("admin/dashboard.html",
@@ -96,6 +98,7 @@ def dashboard():
         total_products=total_products,
         pending_orders=pending_orders,
         confirmed_orders=confirmed_orders,
+        waitlist_count=waitlist_count,
         recent_orders=recent_orders,
         admin_name=session.get("admin_name")
     )
@@ -107,7 +110,7 @@ def dashboard():
 @admin_required
 def products():
     admin        = get_admin()
-    all_products = Product.query.filter_by(is_active=True).order_by(Product.created_at.desc()).all()
+    all_products = Product.query.order_by(Product.created_at.desc()).all()
     return render_template("admin/products.html",
         products=all_products,
         admin=admin,
@@ -120,7 +123,6 @@ def products():
 def add_product():
     admin  = get_admin()
     types  = ProductType.query.all()
-    # types  = ["Sneakers","Flat shoe"]
     folder = current_app.config["UPLOAD_FOLDER"]
 
     if request.method == "POST":
@@ -156,12 +158,10 @@ def add_product():
 
         # Handle image uploads
         images   = request.files.getlist("images")
-        print(images)
         is_first = True
         for img_file in images:
             filename = save_image(img_file, folder)
             if filename:
-                print("yeah")
                 db.session.add(ProductImage(
                     filename=filename,
                     product_id=product.id,
@@ -250,7 +250,7 @@ def edit_product(product_id):
 @admin_required
 def delete_product(product_id):
     product = db.get_or_404(Product, product_id)
-    product.is_active = False
+    db.session.delete(product)
     db.session.commit()
     flash("Product deleted.", "success")
     return redirect(url_for("admin.products"))
@@ -401,12 +401,20 @@ def order_detail(order_id):
 @admin_bp.route("/orders/<int:order_id>/confirm", methods=["POST"])
 @admin_required
 def confirm_payment(order_id):
+    from app.models import StoreSettings
     order        = db.get_or_404(Order, order_id)
     order.status = "confirmed"
+
     if order.payment:
         order.payment.confirmed    = True
         order.payment.confirmed_at = datetime.utcnow()
         order.payment.admin_id     = session["admin_id"]
+
+    # ✅ Calculate delivery from time admin confirms payment
+    store = StoreSettings.query.first()
+    delivery_days = store.delivery_days if store and store.delivery_days else 3
+    order.estimated_delivery = datetime.utcnow() + timedelta(days=delivery_days)
+
     db.session.commit()
     flash(f"Order #{order.id} confirmed.", "success")
     return redirect(url_for("admin.orders"))
@@ -427,9 +435,16 @@ def reject_payment(order_id):
 @admin_bp.route("/settings", methods=["GET", "POST"])
 @admin_required
 def settings():
+    from app.models import StoreSettings
     admin = get_admin()
+    store = StoreSettings.query.first()
+    if not store:
+        store = StoreSettings()
+        db.session.add(store)
+        db.session.commit()
 
     if request.method == "POST":
+        # Admin profile
         admin.name           = request.form.get("name")
         admin.phone          = request.form.get("phone")
         admin.account_number = request.form.get("account_number")
@@ -440,11 +455,38 @@ def settings():
         if new_password:
             admin.password = generate_password_hash(new_password)
 
+        # Store settings
+        delivery_days = request.form.get("delivery_days")
+        if delivery_days and delivery_days.isdigit():
+            store.delivery_days = int(delivery_days)
+        store.delivery_note  = request.form.get("delivery_note", "").strip()
+        store.terms          = request.form.get("terms", "").strip()
+        store.privacy_policy = request.form.get("privacy_policy", "").strip()
+        store.refund_policy  = request.form.get("refund_policy", "").strip()
+
         db.session.commit()
         flash("Settings saved.", "success")
         return redirect(url_for("admin.settings"))
 
     return render_template("admin/settings.html",
+        admin=admin,
+        store=store,
+        admin_name=session.get("admin_name")
+    )
+
+
+# ── WAITLIST ──────────────────────────────────────────────────
+
+@admin_bp.route("/waitlist")
+@admin_required
+def waitlist():
+    from app.models import WaitlistItem
+    admin = get_admin()
+    items = WaitlistItem.query.filter_by(notified=False).order_by(
+        WaitlistItem.created_at.desc()
+    ).all()
+    return render_template("admin/waitlist.html",
+        items=items,
         admin=admin,
         admin_name=session.get("admin_name")
     )

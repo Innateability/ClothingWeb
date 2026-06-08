@@ -1,0 +1,9 @@
+add delivery duration and time(add a custom delivery time that can be change by admin like 'now + timedelta(days=custom_time)',something like this) on the 
+customers should add address when they want tp make payment and if another time they want to pay again you can suggest the address they used before
+change the color to white and purple
+be able to suggest unavailable products in advance(sizes,color,out of stock items),maybe if the one you want is not available in colour or size you can suggest for it
+reduce the size of the pic(especially the height) because it takes up too much space(or leave it like that if it is more better like that) 
+add to cart and add to wishlist buttons so that you can add based on what you want and thenon both the cat and wishlist page you should be able to add to eiter the wishlist and cart respectively
+and a suggestion part under the product details(related products)
+if there is only one colour or size just display instead of asking to choose
+and i want to add terms and conditions,privacy poliy and stuff

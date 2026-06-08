@@ -5,11 +5,15 @@
 <div class="hero">
   <div class="hero-left">
     <div class="hero-eyebrow">New Season Collection</div>
-    <h1 class="hero-title">Dress to<br>Dominate.</h1>
-    <p class="hero-sub">Curated fashion pieces for every style. From streetwear to luxury — find your fit.</p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;animation:fadeUp 0.6s 0.65s ease both">
-      <a href="#products" class="btn btn-fire btn-lg">Shop Now →</a>
-      <a href="{{ url_for('base.index', on_sale=1) }}" class="btn btn-ghost btn-lg">View Sales 🔥</a>
+    <h1 class="hero-title" style="font-family:'Syne',sans-serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:800;color:#fff;line-height:1.1">
+      Dress to<br>Dominate.
+    </h1>
+    <p class="hero-sub">
+      Curated fashion for every style. From streetwear to luxury — find your fit.
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <a href="#products" class="btn btn-purple btn-lg" style="background:white;color:var(--purple)">Shop Now →</a>
+      <a href="{{ url_for('base.index', on_sale=1) }}" class="btn btn-lg" style="background:rgba(255,255,255,0.15);color:white;border-color:rgba(255,255,255,0.3)">View Sale</a>
     </div>
   </div>
   <div class="hero-right">
@@ -34,9 +38,34 @@
   </div>
 </div>
 
-<!-- FILTER BAR -->
-<form method="GET" action="{{ url_for('base.index') }}" class="filter-bar" id="products">
+<!-- CATEGORY PILLS -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px" id="products">
+  <a href="{{ url_for('base.index') }}"
+     class="btn btn-sm {% if not selected_type_id and not selected_gender and not on_sale %}btn-purple{% else %}btn-ghost{% endif %}">
+    All
+  </a>
+  {% for t in types %}
+  <a href="{{ url_for('base.index', type_id=t.id) }}"
+     class="btn btn-sm {% if selected_type_id == t.id %}btn-purple{% else %}btn-ghost{% endif %}">
+    {{ t.name }}
+  </a>
+  {% endfor %}
+  <a href="{{ url_for('base.index', gender='male') }}"
+     class="btn btn-sm {% if selected_gender == 'male' %}btn-purple{% else %}btn-ghost{% endif %}">
+    Men
+  </a>
+  <a href="{{ url_for('base.index', gender='female') }}"
+     class="btn btn-sm {% if selected_gender == 'female' %}btn-purple{% else %}btn-ghost{% endif %}">
+    Women
+  </a>
+  <a href="{{ url_for('base.index', on_sale=1) }}"
+     class="btn btn-sm {% if on_sale %}btn-accent{% else %}btn-ghost{% endif %}">
+    🔥 Sale
+  </a>
+</div>
 
+<!-- FILTER BAR -->
+<form method="GET" action="{{ url_for('base.index') }}" class="filter-bar">
   <div class="filter-group">
     <span class="filter-label">Category</span>
     <select name="type_id" onchange="loadKinds(this.value)">
@@ -46,7 +75,6 @@
       {% endfor %}
     </select>
   </div>
-
   <div class="filter-group">
     <span class="filter-label">Kind</span>
     <select name="kind_id" id="kind-sel">
@@ -60,7 +88,6 @@
       {% endif %}
     </select>
   </div>
-
   <div class="filter-group">
     <span class="filter-label">Gender</span>
     <select name="gender">
@@ -70,7 +97,6 @@
       <option value="unisex" {% if selected_gender == 'unisex' %}selected{% endif %}>Unisex</option>
     </select>
   </div>
-
   <div class="filter-group">
     <span class="filter-label">Color</span>
     <select name="color_id">
@@ -80,54 +106,43 @@
       {% endfor %}
     </select>
   </div>
-
   <div class="filter-group">
     <span class="filter-label">Size</span>
     <input type="text" name="size" value="{{ selected_size or '' }}" placeholder="e.g. XL, 42" style="width:90px">
   </div>
-
   <div class="filter-group">
-    <span class="filter-label">Min (₦)</span>
+    <span class="filter-label">Min ₦</span>
     <input type="number" name="min_price" value="{{ min_price or '' }}" placeholder="0" style="width:90px">
   </div>
-
   <div class="filter-group">
-    <span class="filter-label">Max (₦)</span>
+    <span class="filter-label">Max ₦</span>
     <input type="number" name="max_price" value="{{ max_price or '' }}" placeholder="Any" style="width:90px">
   </div>
-
   <div class="filter-group">
     <span class="filter-label">&nbsp;</span>
-    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;
-                  color:rgba(255,255,255,0.65);cursor:pointer;white-space:nowrap">
-      <input type="checkbox" name="on_sale" value="1"
-             {% if on_sale %}checked{% endif %}
-             style="width:auto;accent-color:var(--coral)">
-      🔥 On Sale
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text2);cursor:pointer">
+      <input type="checkbox" name="on_sale" value="1" {% if on_sale %}checked{% endif %} style="width:auto;accent-color:var(--purple)">
+      On Sale
     </label>
   </div>
-
   <div class="filter-group">
     <span class="filter-label">&nbsp;</span>
     <div style="display:flex;gap:8px">
-      <button type="submit" class="btn btn-fire btn-sm">Filter</button>
+      <button type="submit" class="btn btn-purple btn-sm">Filter</button>
       <a href="{{ url_for('base.index') }}" class="btn btn-ghost btn-sm">Clear</a>
     </div>
   </div>
 </form>
 
-<!-- RESULTS COUNT -->
+<!-- RESULTS -->
 <div class="section-head">
-  <h2 class="section-title">
-    <span>{{ products|length }}</span> Product{{ 's' if products|length != 1 }}
-  </h2>
+  <h2 class="section-title"><span>{{ products|length }}</span> Product{{ 's' if products|length != 1 }}</h2>
 </div>
 
-<!-- PRODUCT GRID -->
 {% if products %}
 <div class="product-grid">
   {% for product in products %}
-  <div class="product-card">
+  <div class="product-card" style="animation-delay:{{ loop.index0 * 0.06 }}s">
     <div class="product-img-wrap">
       {% if product.primary_image() %}
         <img src="{{ url_for('static', filename='images/' + product.primary_image()) }}"
@@ -137,14 +152,35 @@
       {% endif %}
 
       <div class="product-badges">
-        {% if product.on_sale %}
-          <span class="badge-sale">Sale</span>
-        {% endif %}
+        {% if product.on_sale %}<span class="badge-sale">Sale</span>{% endif %}
+        {% if product.stock == 0 %}<span class="badge-oos">Out of Stock</span>{% endif %}
         <span class="badge-gender">{{ product.gender }}</span>
       </div>
 
-      <a href="{{ url_for('base.product_detail', product_id=product.id) }}"
-         class="product-quick-add">View Product →</a>
+      <!-- QUICK ACTIONS -->
+      <div class="product-actions">
+        <form method="POST" action="{{ url_for('base.add_to_cart', product_id=product.id) }}" style="flex:1">
+          <input type="hidden" name="size" value="{{ product.get_sizes()[0] if product.get_sizes()|length == 1 else '' }}">
+          <input type="hidden" name="quantity" value="1">
+          <button type="submit" class="btn btn-purple btn-sm btn-full"
+                  {% if product.stock == 0 %}disabled style="opacity:0.5"{% endif %}>
+            🛒 Cart
+          </button>
+        </form>
+        {% if session.get('buyer_id') %}
+        <form method="POST" action="{{ url_for('base.add_to_wishlist', product_id=product.id) }}" style="display:contents">
+          <button type="button"
+                  class="btn btn-wishlist btn-sm"
+                  onclick="toggleWishlistCard(this, {{ product.id }})"
+                  title="Add to Wishlist">♡</button>
+        </form>
+        {% else %}
+        <button type="button"
+                class="btn btn-wishlist btn-sm"
+                onclick="promptLoginModal()"
+                title="Save to Wishlist">♡</button>
+        {% endif %}
+      </div>
     </div>
 
     <a href="{{ url_for('base.product_detail', product_id=product.id) }}"
@@ -154,21 +190,16 @@
           {{ product.product_type.name }}{% if product.kind %} / {{ product.kind.name }}{% endif %}
         </div>
         <div class="product-name">{{ product.name }}</div>
-
-        <!-- COLORS — from relationship -->
         {% if product.colors %}
         <div class="product-colors">
           {% for color in product.colors %}
-            <span class="color-swatch"
-                  style="background:{{ color.name.lower() }}"
-                  title="{{ color.name }}"></span>
+            <span class="color-swatch" style="background:{{ color.name.lower() }}" title="{{ color.name }}"></span>
           {% endfor %}
         </div>
         {% endif %}
-
         <div class="product-price">
           {% if product.on_sale %}
-            <span class="price-now">₦{{ "{:,.0f}".format(product.sale_price) }}</span>
+            <span class="price-now price-sale">₦{{ "{:,.0f}".format(product.sale_price) }}</span>
             <span class="price-old">₦{{ "{:,.0f}".format(product.price) }}</span>
           {% else %}
             <span class="price-now">₦{{ "{:,.0f}".format(product.price) }}</span>
@@ -179,13 +210,12 @@
   </div>
   {% endfor %}
 </div>
-
 {% else %}
 <div class="empty-state">
   <span class="empty-icon">🛍️</span>
   <div class="empty-title">No products found</div>
-  <p style="font-size:0.88rem;margin-bottom:20px">Try adjusting your filters or browse all items.</p>
-  <a href="{{ url_for('base.index') }}" class="btn btn-fire">Browse All</a>
+  <p style="font-size:0.88rem;margin-bottom:20px;color:var(--muted)">Try adjusting your filters.</p>
+  <a href="{{ url_for('base.index') }}" class="btn btn-purple">Browse All</a>
 </div>
 {% endif %}
 
@@ -195,7 +225,6 @@ const kindsData = {
   {{ t.id }}: [{% for k in t.kinds %}{"id":{{ k.id }},"name":"{{ k.name }}"}{% if not loop.last %},{% endif %}{% endfor %}],
   {% endfor %}
 };
-
 function loadKinds(typeId) {
   const sel = document.getElementById('kind-sel');
   sel.innerHTML = '<option value="">All Kinds</option>';
@@ -205,5 +234,137 @@ function loadKinds(typeId) {
     sel.appendChild(o);
   });
 }
+
+function toggleWishlistCard(btn, productId) {
+  fetch(`/wishlist/add/${productId}`, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'added') {
+      btn.textContent = '♥';
+      btn.style.background = 'var(--purple)';
+      btn.style.color      = 'white';
+    } else {
+      btn.textContent = '♡';
+      btn.style.background = '';
+      btn.style.color      = '';
+    }
+    updateWishlistBadge(data.status);
+    showToast(data.message);
+  });
+}
+
+function updateWishlistBadge(action) {
+  // Find the wishlist link in navbar
+  const wishlistLink = document.querySelector('a[href*="/wishlist"]');
+  if (!wishlistLink) return;
+
+  let badge = wishlistLink.querySelector('.wishlist-count');
+
+  // Get current count from badge or 0
+  let count = badge ? parseInt(badge.textContent) || 0 : 0;
+
+  if (action === 'added') {
+    count += 1;
+  } else {
+    count = Math.max(0, count - 1);
+  }
+
+  if (count > 0) {
+    if (!badge) {
+      // Create badge if it doesn't exist yet
+      badge = document.createElement('span');
+      badge.className = 'wishlist-count cart-count';
+      badge.style.background = 'var(--accent)';
+      wishlistLink.appendChild(badge);
+    }
+    badge.textContent = count;
+    // Pulse animation
+    badge.style.transform = 'scale(1.4)';
+    setTimeout(() => badge.style.transform = 'scale(1)', 200);
+  } else {
+    // Remove badge if count hits 0
+    if (badge) badge.remove();
+  }
+}
+
+function showToast(message) {
+  const existing = document.getElementById('ajax-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'ajax-toast';
+  toast.textContent = message;
+  toast.style.cssText = `
+    position:fixed;bottom:24px;left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--purple);color:white;
+    padding:10px 24px;border-radius:30px;
+    font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:600;
+    box-shadow:0 8px 24px rgba(108,63,197,0.35);
+    z-index:9999;opacity:0;transition:all 0.3s ease;white-space:nowrap;
+  `;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+function promptLoginModal() {
+  document.getElementById('login-prompt-modal').style.display = 'flex';
+}
+
+function closeLoginModal() {
+  document.getElementById('login-prompt-modal').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('login-prompt-modal');
+  if (modal && e.target === modal) closeLoginModal();
+});
 </script>
+
+<!-- LOGIN PROMPT MODAL -->
+<div id="login-prompt-modal"
+     style="display:none;position:fixed;inset:0;background:rgba(30,27,46,0.6);
+            z-index:9999;align-items:center;justify-content:center;
+            backdrop-filter:blur(4px)">
+  <div style="background:var(--white);border-radius:var(--radius-xl);
+              padding:36px 40px;max-width:380px;width:90%;
+              box-shadow:var(--shadow-lg);text-align:center;
+              animation:scaleIn 0.25s ease both">
+
+    <div style="font-size:2.5rem;margin-bottom:14px;color:var(--purple)">♡</div>
+
+    <h2 style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;
+               letter-spacing:-0.02em;color:var(--text);margin-bottom:8px">
+      Save to Wishlist
+    </h2>
+    <p style="font-size:0.86rem;color:var(--muted);margin-bottom:24px;line-height:1.6">
+      Sign in or create a free account to save items and shop them later.
+    </p>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <a href="{{ url_for('base.login') }}"
+         class="btn btn-purple btn-lg btn-full">Sign In</a>
+      <a href="{{ url_for('base.register') }}"
+         class="btn btn-outline btn-lg btn-full">Create Account</a>
+      <button type="button" onclick="closeLoginModal()"
+              style="background:none;border:none;color:var(--muted);
+                     font-size:0.82rem;cursor:pointer;margin-top:4px;
+                     font-family:'DM Sans',sans-serif;padding:4px">
+        Continue browsing
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

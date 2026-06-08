@@ -1,0 +1,110 @@
+{% extends "layout.html" %}
+{% block title %}Delivery Address{% endblock %}
+{% block content %}
+<div style="max-width:600px;margin:0 auto">
+
+  <h1 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:8px">
+    Delivery Address
+  </h1>
+  <p style="color:var(--muted);font-size:0.88rem;margin-bottom:28px">
+    Where should we deliver your order?
+  </p>
+
+  <form method="POST" action="{{ url_for('base.checkout_confirm_address') }}">
+
+    <!-- Pass selected items -->
+    {% for id in selected_ids %}
+    <input type="hidden" name="selected_items" value="{{ id }}">
+    {% endfor %}
+    <input type="hidden" name="notes" value="{{ notes }}">
+
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">📍 Delivery Details</span></div>
+      <div class="card-body">
+
+        <!-- SUGGEST SAVED ADDRESS -->
+        {% if buyer.saved_address %}
+        <div style="background:var(--purple-xs);border:1.5px solid var(--border2);
+                    border-radius:var(--radius);padding:14px 16px;margin-bottom:18px">
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                      letter-spacing:0.1em;color:var(--purple);margin-bottom:6px">
+            💡 Previously used address
+          </div>
+          <p style="font-size:0.85rem;color:var(--text2);margin-bottom:10px;line-height:1.6">
+            {{ buyer.saved_address }}<br>
+            {{ buyer.saved_city }}{% if buyer.saved_state %}, {{ buyer.saved_state }}{% endif %}
+          </p>
+          <button type="button" class="btn btn-purple btn-sm"
+                  onclick="useSavedAddress('{{ buyer.saved_address }}','{{ buyer.saved_city }}','{{ buyer.saved_state }}')">
+            ✓ Use This Address
+          </button>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label class="form-label">Street Address <span style="color:#991b1b">*</span></label>
+          <input type="text" name="delivery_address" id="addr-input"
+                 placeholder="e.g. 12 Bode Thomas Street, Surulere"
+                 value="{{ buyer.saved_address or '' }}" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">City <span style="color:#991b1b">*</span></label>
+            <input type="text" name="delivery_city" id="city-input"
+                   placeholder="e.g. Lagos" value="{{ buyer.saved_city or '' }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">State <span style="color:#991b1b">*</span></label>
+            <input type="text" name="delivery_state" id="state-input"
+                   placeholder="e.g. Lagos State" value="{{ buyer.saved_state or '' }}" required>
+          </div>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.83rem;color:var(--text2);cursor:pointer;margin-top:6px">
+          <input type="checkbox" name="save_address" value="1" checked style="width:auto;accent-color:var(--purple)">
+          Save this address for next time
+        </label>
+      </div>
+    </div>
+
+    <!-- ORDER SUMMARY -->
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Order Summary</span></div>
+      <div class="card-body">
+        {% for item in items %}
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span>{{ item.product.name }}
+            {% if item.size %}<span style="color:var(--muted)">· {{ item.size }}</span>{% endif %}
+            {% if item.color %}<span style="color:var(--muted)">· {{ item.color }}</span>{% endif %}
+            × {{ item.quantity }}</span>
+          <span style="font-weight:700;color:var(--purple)">₦{{ "{:,.0f}".format(item.product.effective_price() * item.quantity) }}</span>
+        </div>
+        {% endfor %}
+        <div style="display:flex;justify-content:space-between;font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;padding-top:12px;color:var(--purple)">
+          <span>Total</span>
+          <span>₦{{ "{:,.0f}".format(total) }}</span>
+        </div>
+
+        {% if settings and settings.delivery_days %}
+        <div class="delivery-badge" style="margin-top:12px;width:100%;justify-content:center">
+          🚚 Estimated delivery: {{ delivery_date }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-purple btn-lg btn-full">
+      Continue to Payment →
+    </button>
+  </form>
+</div>
+
+<script>
+function useSavedAddress(addr, city, state) {
+  document.getElementById('addr-input').value  = addr;
+  document.getElementById('city-input').value  = city;
+  document.getElementById('state-input').value = state;
+}
+</script>
+{% endblock %}

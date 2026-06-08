@@ -1,20 +1,61 @@
 {% extends "layout.html" %}
 {% block title %}My Profile{% endblock %}
 {% block content %}
-<h1 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:28px">My Account</h1>
+
+<h1 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:28px">
+  My Account
+</h1>
 
 <div class="profile-layout">
-  <!-- PROFILE CARD -->
-  <div class="profile-card">
-    <div class="profile-avatar">{{ buyer.name[0].upper() }}</div>
-    <div class="profile-name">{{ buyer.name }}</div>
-    <div class="profile-email">{{ buyer.email }}</div>
-    {% if buyer.phone %}<div style="font-size:0.82rem;color:var(--muted);margin-top:4px">{{ buyer.phone }}</div>{% endif %}
 
-    <div style="margin-top:24px;display:flex;flex-direction:column;gap:10px">
-      <a href="{{ url_for('base.orders') }}" class="btn btn-electric btn-sm btn-full">My Orders</a>
-      <a href="{{ url_for('base.cart') }}" class="btn btn-ghost btn-sm btn-full">My Cart</a>
-      <a href="{{ url_for('base.logout') }}" class="btn btn-danger btn-sm btn-full">Logout</a>
+  <!-- PROFILE CARD -->
+  <div>
+    <div class="profile-card mb-4">
+      <div class="profile-avatar">{{ buyer.name[0].upper() }}</div>
+      <div class="profile-name">{{ buyer.name }}</div>
+      <div class="profile-email">{{ buyer.email }}</div>
+      {% if buyer.phone %}
+      <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:3px">{{ buyer.phone }}</div>
+      {% endif %}
+
+      <div style="margin-top:22px;display:flex;flex-direction:column;gap:8px">
+        <a href="{{ url_for('base.orders') }}"   class="btn btn-sm btn-full" style="background:rgba(255,255,255,0.12);color:white;border-color:rgba(255,255,255,0.2)">My Orders</a>
+        <a href="{{ url_for('base.wishlist') }}"  class="btn btn-sm btn-full" style="background:rgba(255,255,255,0.12);color:white;border-color:rgba(255,255,255,0.2)">♡ Wishlist</a>
+        <a href="{{ url_for('base.cart') }}"      class="btn btn-sm btn-full" style="background:rgba(255,255,255,0.12);color:white;border-color:rgba(255,255,255,0.2)">My Cart</a>
+        <a href="{{ url_for('base.logout') }}"    class="btn btn-danger btn-sm btn-full">Logout</a>
+      </div>
+    </div>
+
+    <!-- SAVED ADDRESS -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">📍 Saved Address</span></div>
+      <div class="card-body">
+        {% if buyer.saved_address %}
+        <p style="font-size:0.85rem;color:var(--text2);margin-bottom:14px;line-height:1.6">
+          {{ buyer.saved_address }}<br>
+          {{ buyer.saved_city }}{% if buyer.saved_state %}, {{ buyer.saved_state }}{% endif %}
+        </p>
+        {% else %}
+        <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px">No saved address yet.</p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('buyer.update_address') }}">
+          <div class="form-group">
+            <label class="form-label">Address</label>
+            <input type="text" name="address" value="{{ buyer.saved_address or '' }}" placeholder="Street address">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">City</label>
+              <input type="text" name="city" value="{{ buyer.saved_city or '' }}" placeholder="City">
+            </div>
+            <div class="form-group">
+              <label class="form-label">State</label>
+              <input type="text" name="state" value="{{ buyer.saved_state or '' }}" placeholder="State">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-purple btn-sm btn-full">Save Address</button>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -27,17 +68,15 @@
     {% if orders %}
     <div class="table-wrap">
       <table>
-        <thead>
-          <tr><th>Order</th><th>Date</th><th>Total</th><th>Status</th></tr>
-        </thead>
+        <thead><tr><th>Order</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
         <tbody>
           {% for order in orders[:5] %}
           <tr>
-            <td style="font-family:'Syne',sans-serif;font-weight:700">#{{ order.id }}</td>
+            <td style="font-family:'Syne',sans-serif;font-weight:800;color:var(--purple)">#{{ order.id }}</td>
             <td style="color:var(--muted)">{{ order.created_at.strftime('%d %b %Y') }}</td>
             <td style="font-weight:600">₦{{ "{:,.0f}".format(order.total) }}</td>
             <td>
-              <span class="tag {% if order.status == 'confirmed' %}tag-green{% elif order.status == 'rejected' %}tag-red{% else %}tag-gold{% endif %}">
+              <span class="tag {% if order.status == 'confirmed' %}tag-green{% elif order.status == 'rejected' %}tag-red{% else %}tag-purple{% endif %}">
                 {{ order.status | title }}
               </span>
             </td>
@@ -47,7 +86,7 @@
       </table>
     </div>
     {% else %}
-    <div class="card-body"><p style="color:var(--muted);font-size:0.88rem">No orders yet.</p></div>
+    <div class="card-body"><p style="color:var(--muted);font-size:0.85rem">No orders yet.</p></div>
     {% endif %}
   </div>
 </div>

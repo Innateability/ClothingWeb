@@ -1,0 +1,119 @@
+{% extends "layout.html" %}
+{% block title %}Refund Policy{% endblock %}
+{% block content %}
+<div style="max-width:760px;margin:0 auto">
+  <div style="margin-bottom:32px">
+    <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--purple);margin-bottom:8px">Legal</div>
+    <h1 style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-0.02em">Refund &amp; Returns Policy</h1>
+    <p style="color:var(--muted);font-size:0.85rem;margin-top:6px">Last updated: {{ now.strftime('%B %Y') if now else '2025' }}</p>
+  </div>
+
+  {% if settings and settings.refund_policy %}
+  <div style="font-size:0.9rem;line-height:1.85;color:var(--text2)">{{ settings.refund_policy | safe }}</div>
+  {% else %}
+  <div style="font-size:0.9rem;line-height:1.85;color:var(--text2)">
+
+    <div style="background:var(--purple-xs);border-left:3px solid var(--purple);padding:14px 18px;
+                border-radius:0 var(--radius) var(--radius) 0;margin-bottom:28px;font-size:0.85rem;color:var(--purple)">
+      This policy is in accordance with your rights under the
+      <strong>Federal Competition and Consumer Protection Act (FCCPA) 2018</strong>
+      and the regulations of the <strong>Consumer Protection Council (CPC)</strong> of Nigeria.
+    </div>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">1. Your Right to Return</h3>
+    <p>Under the <strong>Federal Competition and Consumer Protection Act (FCCPA) 2018</strong>,
+    you have the right to return goods that are defective, not as described, or unfit for
+    purpose. In addition to your statutory rights, we offer a voluntary return window of
+    <strong>7 days</strong> from the date of delivery for eligible items.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">2. Eligibility for Returns</h3>
+    <p>To be eligible for a return, your item must meet <strong>all</strong> of the
+    following conditions:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li>Returned within <strong>7 days</strong> of the delivery date</li>
+      <li>Unworn, unwashed, and unaltered</li>
+      <li>In original packaging with all tags still attached</li>
+      <li>Accompanied by proof of purchase (order number)</li>
+    </ul>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">3. Non-Returnable Items</h3>
+    <p>The following items cannot be returned unless they are defective or not as described:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li>Sale or discounted items marked as final sale</li>
+      <li>Underwear, lingerie, and swimwear (for hygiene reasons)</li>
+      <li>Accessories (belts, bags, jewellery)</li>
+      <li>Items that have been worn, washed, or had tags removed</li>
+      <li>Items returned after the 7-day window</li>
+    </ul>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">4. How to Initiate a Return</h3>
+    <p>To start a return:</p>
+    <ol style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:8px">
+      <li>Contact us via the phone number on your order confirmation <strong>within 7 days of delivery</strong></li>
+      <li>Provide your order number and the reason for the return</li>
+      <li>We will verify your eligibility and provide return instructions</li>
+      <li>Package the item securely and send it to the address we provide</li>
+    </ol>
+    <p style="margin-top:10px"><strong>Note:</strong> Do not return items without first
+    contacting us. Unauthorised returns may not be accepted.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">5. Return Shipping Costs</h3>
+    <p>Return shipping costs are the responsibility of the buyer, except in the following cases
+    where we will cover return shipping:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li>You received a defective or damaged item</li>
+      <li>You received the wrong item</li>
+      <li>The item was significantly not as described</li>
+    </ul>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">6. Refund Processing</h3>
+    <p>Once we receive and inspect the returned item, we will notify you of the outcome
+    within <strong>48 hours</strong>. If your return is approved:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li>Refunds are processed within <strong>3–5 business days</strong></li>
+      <li>Refunds are made to your original payment method (bank transfer or Paystack reversal)</li>
+      <li>We do not refund original delivery charges unless the return is due to our error</li>
+    </ul>
+    <p>If your return is rejected (e.g. item shows signs of wear), we will notify you and
+    return the item to you at your expense.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">7. Defective or Wrong Items</h3>
+    <p>If you receive a defective, damaged, or incorrect item, you must contact us within
+    <strong>48 hours of delivery</strong> with:</p>
+    <ul style="margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:6px">
+      <li>Your order number</li>
+      <li>Clear photographs of the defect or wrong item</li>
+      <li>A brief description of the issue</li>
+    </ul>
+    <p>We will offer you a <strong>replacement</strong> or <strong>full refund</strong>
+    at no additional cost to you. This is in addition to your rights under the FCCPA 2018.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">8. Exchanges</h3>
+    <p>We offer size or colour exchanges subject to availability. Contact us with your
+    order number and the item you would like to exchange for. If the requested item is
+    available, we will process the exchange once the original item is returned and inspected.
+    Exchange shipping costs are shared — return shipping is paid by the buyer, outbound
+    shipping for the new item is covered by us.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">9. Consumer Protection</h3>
+    <p>If you feel your consumer rights have not been respected, you may contact the
+    <strong>Consumer Protection Council (CPC)</strong> of Nigeria at
+    <strong>cpc.gov.ng</strong> or call their national consumer helpline.
+    You may also contact the <strong>Federal Competition and Consumer Protection
+    Commission (FCCPC)</strong> at <strong>fccpc.gov.ng</strong>.</p>
+
+    <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--text)">10. Contact Us</h3>
+    <p>For all return and refund queries, please contact us via the phone number
+    shown on your order confirmation page. Our team is available Monday to Saturday,
+    9am to 6pm WAT.</p>
+
+  </div>
+  {% endif %}
+
+  <div style="margin-top:36px;padding-top:20px;border-top:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap">
+    <a href="{{ url_for('base.terms') }}"   class="btn btn-ghost btn-sm">Terms & Conditions</a>
+    <a href="{{ url_for('base.privacy') }}" class="btn btn-ghost btn-sm">Privacy Policy</a>
+    <a href="{{ url_for('base.index') }}"   class="btn btn-ghost btn-sm">← Back to Shop</a>
+  </div>
+</div>
+{% endblock %}

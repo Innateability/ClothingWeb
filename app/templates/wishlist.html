@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+{% block title %}My Wishlist{% endblock %}
+{% block content %}
+
+<div class="flex-between mb-4">
+  <h1 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em">
+    ♡ Wishlist <span style="color:var(--muted);font-size:1.1rem;font-weight:400">({{ items|length }})</span>
+  </h1>
+  <a href="{{ url_for('base.index') }}" class="btn btn-ghost btn-sm">← Continue Shopping</a>
+</div>
+
+{% if items %}
+<div class="product-grid">
+  {% for item in items %}
+  <div class="card" style="display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-lg)">
+    <div style="position:relative;overflow:hidden;aspect-ratio:4/5">
+      {% if item.product.primary_image() %}
+        <img src="{{ url_for('static', filename='images/' + item.product.primary_image()) }}"
+             alt="{{ item.product.name }}"
+             style="width:100%;height:100%;object-fit:cover;transition:transform 0.4s"
+             onmouseover="this.style.transform='scale(1.05)'"
+             onmouseout="this.style.transform='scale(1)'">
+      {% else %}
+        <div style="width:100%;height:100%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:3rem">👕</div>
+      {% endif %}
+      {% if item.product.stock == 0 %}
+      <div style="position:absolute;top:10px;left:10px">
+        <span class="badge-oos">Out of Stock</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:8px">
+      <div class="product-type-tag">{{ item.product.product_type.name }}</div>
+      <div class="product-name">
+        <a href="{{ url_for('base.product_detail', product_id=item.product.id) }}"
+           style="text-decoration:none;color:inherit">{{ item.product.name }}</a>
+      </div>
+
+      <!-- Colors -->
+      {% if item.product.colors %}
+      <div class="product-colors">
+        {% for color in item.product.colors %}
+          <span class="color-swatch" style="background:{{ color.name.lower() }}" title="{{ color.name }}"></span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="product-price" style="margin-top:auto">
+        {% if item.product.on_sale %}
+          <span class="price-now price-sale">₦{{ "{:,.0f}".format(item.product.sale_price) }}</span>
+          <span class="price-old">₦{{ "{:,.0f}".format(item.product.price) }}</span>
+        {% else %}
+          <span class="price-now">₦{{ "{:,.0f}".format(item.product.price) }}</span>
+        {% endif %}
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:6px">
+        {% if item.product.stock > 0 %}
+          {% set needs_choice = item.product.get_sizes()|length > 1 or item.product.colors|length > 1 %}
+          {% if needs_choice %}
+          <!-- Has multiple sizes or colors — go to product page to choose -->
+          <a href="{{ url_for('base.product_detail', product_id=item.product.id) }}"
+             class="btn btn-purple btn-sm" style="flex:1;text-align:center">
+            🎯 Select Options
+          </a>
+          {% else %}
+          <!-- No choices needed — move directly to cart -->
+          <form method="POST" action="{{ url_for('base.move_to_cart', item_id=item.id) }}" style="flex:1">
+            <button type="submit" class="btn btn-purple btn-sm btn-full">🛒 Add to Cart</button>
+          </form>
+          {% endif %}
+        {% else %}
+        <a href="{{ url_for('base.product_detail', product_id=item.product.id) }}"
+           class="btn btn-ghost btn-sm" style="flex:1">🔔 Join Waitlist</a>
+        {% endif %}
+        <form method="POST" action="{{ url_for('base.remove_from_wishlist', item_id=item.id) }}">
+          <button type="submit" class="btn btn-danger btn-sm">✕</button>
+        </form>
+      </div>
+
+      <p style="font-size:0.72rem;color:var(--muted)">
+        Added {{ item.added_at.strftime('%d %b %Y') }}
+      </p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <span class="empty-icon">♡</span>
+  <div class="empty-title">Your wishlist is empty</div>
+  <p style="font-size:0.88rem;margin-bottom:24px;color:var(--muted)">
+    Save items you love and come back to them later.
+  </p>
+  <a href="{{ url_for('base.index') }}" class="btn btn-purple btn-lg">Browse Products</a>
+</div>
+{% endif %}
+{% endblock %}

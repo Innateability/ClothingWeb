@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% block title %}{{ product.name }}{% endblock %}
 {% block content %}
+
 <div style="margin-bottom:20px">
   <a href="{{ url_for('base.index') }}" class="btn btn-ghost btn-sm">← Back to Shop</a>
 </div>
@@ -16,7 +17,6 @@
       <div class="detail-thumbs">
         {% for img in product.images %}
         <img src="{{ url_for('static', filename='images/' + img.filename) }}"
-             alt="thumb"
              class="detail-thumb {% if img.is_primary %}active{% endif %}"
              onclick="swapImage(this)">
         {% endfor %}
@@ -29,7 +29,6 @@
 
   <!-- INFO -->
   <div class="detail-info">
-
     <div>
       <div class="detail-category">
         {{ product.product_type.name }}{% if product.kind %} / {{ product.kind.name }}{% endif %}
@@ -41,10 +40,7 @@
     <!-- PRICE -->
     <div class="detail-price-wrap">
       {% if product.on_sale %}
-        <div class="detail-price"
-             style="background:var(--g-lime);-webkit-background-clip:text;background-clip:text">
-          ₦{{ "{:,.0f}".format(product.sale_price) }}
-        </div>
+        <div class="detail-price detail-price-sale">₦{{ "{:,.0f}".format(product.sale_price) }}</div>
         <div class="detail-old-price">₦{{ "{:,.0f}".format(product.price) }}</div>
         <span class="badge-sale">SALE</span>
       {% else %}
@@ -52,32 +48,38 @@
       {% endif %}
     </div>
 
-    <!-- COLORS — clickable selection -->
+    <!-- DESCRIPTION -->
+    {% if product.description %}
+    <p class="detail-desc">{{ product.description }}</p>
+    {% endif %}
+
+    <!-- STOCK STATUS -->
+    <div>
+      {% if product.stock > 0 %}
+        <span class="tag tag-green">● In Stock ({{ product.stock }} left)</span>
+      {% else %}
+        <span class="tag tag-red">● Out of Stock</span>
+      {% endif %}
+    </div>
+
+    <!-- COLORS -->
     {% if product.colors %}
     <div>
-      <div class="filter-label" style="margin-bottom:10px">
-        Color: <span id="selected-color-label" style="color:var(--white);font-weight:600;text-transform:none;letter-spacing:0">
-          — select a color —
+      <div class="form-label" style="margin-bottom:10px">
+        Color:
+        <span id="color-label" style="color:var(--purple);font-weight:700;text-transform:none;letter-spacing:0">
+          {% if product.colors|length == 1 %}{{ product.colors[0].name }}{% else %}— select —{% endif %}
         </span>
       </div>
-      <input type="hidden" name="color" id="selected-color-input">
-      <div class="detail-colors-row" style="display:flex;flex-wrap:wrap;gap:10px">
+      <input type="hidden" id="selected-color" value="{% if product.colors|length == 1 %}{{ product.colors[0].name }}{% endif %}">
+      <div class="detail-colors-row">
         {% for color in product.colors %}
         <button type="button"
-                class="color-select-btn"
-                data-color="{{ color.name }}"
+                class="detail-color-tag {% if product.colors|length == 1 %}selected{% endif %}"
                 onclick="selectColor(this, '{{ color.name }}')"
-                title="{{ color.name }}"
-                style="display:flex;align-items:center;gap:8px;
-                       padding:7px 14px;border-radius:8px;cursor:pointer;
-                       border:2px solid rgba(255,255,255,0.12);
-                       background:rgba(255,255,255,0.04);
-                       transition:all 0.2s;font-size:0.82rem;
-                       color:rgba(255,255,255,0.75);font-family:'DM Sans',sans-serif">
-          <span style="width:18px;height:18px;border-radius:50%;
-                       background:{{ color.name.lower() }};
-                       border:2px solid rgba(255,255,255,0.2);
-                       display:inline-block;flex-shrink:0"></span>
+                data-color="{{ color.name }}">
+          <span style="width:16px;height:16px;border-radius:50%;background:{{ color.name.lower() }};
+                       border:2px solid rgba(0,0,0,0.1);display:inline-block;flex-shrink:0"></span>
           {{ color.name }}
         </button>
         {% endfor %}
@@ -85,130 +87,198 @@
     </div>
     {% endif %}
 
-    <!-- DESCRIPTION -->
-    {% if product.description %}
-    <p class="detail-desc">{{ product.description }}</p>
+    <!-- SIZES -->
+    {% if product.get_sizes() %}
+    <div>
+      <div class="form-label" style="margin-bottom:10px">
+        Size:
+        <span id="size-label" style="color:var(--purple);font-weight:700;text-transform:none;letter-spacing:0">
+          {% if product.get_sizes()|length == 1 %}{{ product.get_sizes()[0] }}{% else %}— select —{% endif %}
+        </span>
+      </div>
+      <input type="hidden" id="selected-size" value="{% if product.get_sizes()|length == 1 %}{{ product.get_sizes()[0] }}{% endif %}">
+      <div class="size-grid">
+        {% for size in product.get_sizes() %}
+          <button type="button"
+                  class="size-btn {% if product.get_sizes()|length == 1 %}selected{% endif %}"
+                  onclick="pickSize(this, '{{ size }}')">{{ size }}</button>
+        {% endfor %}
+      </div>
+      <p id="size-error" style="display:none;color:#991b1b;font-size:0.78rem;margin-top:6px">⚠ Please select a size</p>
+    </div>
     {% endif %}
 
-    <!-- STOCK -->
-    <div style="display:flex;align-items:center;gap:10px">
-      {% if product.stock > 0 %}
-        <span class="tag tag-green" id="stock-tag">
-          ● In Stock (<span id="stock-count">{{ product.stock }}</span>)
-        </span>
-      {% else %}
-        <span class="tag tag-red">● Out of Stock</span>
-      {% endif %}
-    </div>
-
-    <!-- ADD TO CART -->
+    <!-- QTY + ACTIONS -->
     {% if product.stock > 0 %}
-    <form method="POST"
-          action="{{ url_for('base.add_to_cart', product_id=product.id) }}"
-          id="add-to-cart-form"
-          onsubmit="return validateForm()">
-
-      <!-- Hidden color input — filled by JS -->
-      <input type="hidden" name="color" id="form-color-input">
-
-      {% if product.get_sizes() %}
-      <div class="form-group">
-        <div class="filter-label">Select Size <span style="color:var(--coral)">*</span></div>
-        <input type="hidden" name="size" id="selected-size">
-        <div class="size-grid">
-          {% for size in product.get_sizes() %}
-            <button type="button" class="size-btn"
-                    onclick="pickSize(this, '{{ size }}')">{{ size }}</button>
-          {% endfor %}
-        </div>
-        <p id="size-error"
-           style="display:none;color:var(--coral);font-size:0.78rem;margin-top:6px">
-          ⚠ Please select a size
-        </p>
-      </div>
-      {% endif %}
+    <form method="POST" action="{{ url_for('base.add_to_cart', product_id=product.id) }}"
+          id="cart-form" onsubmit="return validateForm()">
+      <input type="hidden" name="size"  id="form-size"  value="{% if product.get_sizes()|length == 1 %}{{ product.get_sizes()[0] }}{% endif %}">
+      <input type="hidden" name="color" id="form-color" value="{% if product.colors|length == 1 %}{{ product.colors[0].name if product.colors else '' }}{% endif %}">
 
       <div class="form-group">
-        <div class="filter-label">Quantity</div>
+        <div class="form-label">Quantity</div>
         <div class="qty-row">
           <div class="qty-control">
             <button type="button" class="qty-btn" onclick="adjustQty(-1)">−</button>
-            <input type="number" name="quantity" id="qty-input"
-                   class="qty-input" value="1" min="1" max="{{ product.stock }}">
+            <input type="number" name="quantity" id="qty-input" class="qty-input"
+                   value="1" min="1" max="{{ product.stock }}">
             <button type="button" class="qty-btn" onclick="adjustQty(1)">+</button>
           </div>
-          <span class="text-small text-muted">
-            Max: <span id="max-qty">{{ product.stock }}</span>
-          </span>
+          <span class="text-small text-muted">Max: {{ product.stock }}</span>
         </div>
       </div>
 
-      <!-- COLOR REQUIRED WARNING -->
-      {% if product.colors %}
-      <p id="color-error"
-         style="display:none;color:var(--coral);font-size:0.78rem;margin-bottom:8px">
-        ⚠ Please select a color
-      </p>
-      {% endif %}
+      <p id="color-error" style="display:none;color:#991b1b;font-size:0.78rem;margin-bottom:8px">⚠ Please select a color</p>
 
-      <div style="display:flex;gap:12px;margin-top:8px">
-        <button type="submit" class="btn btn-fire btn-lg" style="flex:1">
-          🛒 Add to Cart
-        </button>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button type="submit" class="btn btn-purple btn-lg" style="flex:1">🛒 Add to Cart</button>
+
+        {% if session.get('buyer_id') %}
+          <!-- Logged in — AJAX toggle -->
+          <button type="button"
+                  id="wishlist-btn"
+                  onclick="toggleWishlist({{ product.id }})"
+                  class="btn btn-wishlist btn-lg"
+                  style="{% if in_wishlist %}background:var(--purple);color:white;border-color:var(--purple){% endif %}">
+            <span id="wishlist-icon">{% if in_wishlist %}♥{% else %}♡{% endif %}</span>
+            <span id="wishlist-label">{% if in_wishlist %}In Wishlist{% else %}Wishlist{% endif %}</span>
+          </button>
+        {% else %}
+          <!-- Not logged in — prompt login on click -->
+          <button type="button"
+                  class="btn btn-wishlist btn-lg"
+                  onclick="promptLogin()">
+            ♡ Wishlist
+          </button>
+        {% endif %}
+
       </div>
     </form>
+
     {% else %}
-    <button class="btn btn-ghost btn-lg btn-full"
-            disabled style="opacity:0.4;cursor:not-allowed">
-      Out of Stock
-    </button>
+    <!-- OUT OF STOCK — WAITLIST -->
+    <div class="waitlist-box">
+      <div class="waitlist-title">🔔 Notify me when available</div>
+      {% if session.get('buyer_id') %}
+      <form method="POST" action="{{ url_for('base.join_waitlist', product_id=product.id) }}">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          {% if product.get_sizes() %}
+          <div class="filter-group">
+            <span class="filter-label">Preferred Size</span>
+            <select name="size">
+              <option value="">Any size</option>
+              {% for s in product.get_sizes() %}
+              <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          {% if product.colors %}
+          <div class="filter-group">
+            <span class="filter-label">Preferred Color</span>
+            <select name="color">
+              <option value="">Any color</option>
+              {% for c in product.colors %}
+              <option value="{{ c.name }}">{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <input type="text" name="note" placeholder="Any note (optional)">
+          <button type="submit" class="btn btn-purple btn-sm">Join Waitlist</button>
+        </div>
+      </form>
+      {% else %}
+      <p style="font-size:0.84rem;color:var(--text2);margin-bottom:10px">
+        <a href="{{ url_for('base.login') }}" style="color:var(--purple);font-weight:700">Login</a>
+        to join the waitlist for this item.
+      </p>
+      {% endif %}
+    </div>
     {% endif %}
 
   </div>
 </div>
 
+<!-- RELATED PRODUCTS -->
+{% if related %}
+<div class="related-section">
+  <div class="section-head">
+    <h2 class="section-title">You May Also <span>Like</span></h2>
+  </div>
+  <div class="product-grid">
+    {% for rp in related %}
+    <div class="product-card">
+      <div class="product-img-wrap">
+        {% if rp.primary_image() %}
+          <img src="{{ url_for('static', filename='images/' + rp.primary_image()) }}"
+               alt="{{ rp.name }}" class="product-img">
+        {% else %}
+          <div class="product-img-placeholder">👕</div>
+        {% endif %}
+        <div class="product-badges">
+          {% if rp.on_sale %}<span class="badge-sale">Sale</span>{% endif %}
+          {% if rp.stock == 0 %}<span class="badge-oos">Out of Stock</span>{% endif %}
+        </div>
+        <div class="product-actions">
+          <form method="POST" action="{{ url_for('base.add_to_cart', product_id=rp.id) }}" style="flex:1">
+            <input type="hidden" name="quantity" value="1">
+            <button type="submit" class="btn btn-purple btn-sm btn-full" {% if rp.stock == 0 %}disabled style="opacity:0.5"{% endif %}>🛒 Cart</button>
+          </form>
+          {% if session.get('buyer_id') %}
+          <form method="POST" action="{{ url_for('base.add_to_wishlist', product_id=rp.id) }}">
+            <button type="submit" class="btn btn-wishlist btn-sm">♡</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      <a href="{{ url_for('base.product_detail', product_id=rp.id) }}"
+         style="text-decoration:none;color:inherit;flex:1;display:flex;flex-direction:column">
+        <div class="product-info">
+          <div class="product-type-tag">{{ rp.product_type.name }}</div>
+          <div class="product-name">{{ rp.name }}</div>
+          <div class="product-price">
+            {% if rp.on_sale %}
+              <span class="price-now price-sale">₦{{ "{:,.0f}".format(rp.sale_price) }}</span>
+              <span class="price-old">₦{{ "{:,.0f}".format(rp.price) }}</span>
+            {% else %}
+              <span class="price-now">₦{{ "{:,.0f}".format(rp.price) }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <script>
 const hasColors = {{ 'true' if product.colors else 'false' }};
 const hasSizes  = {{ 'true' if product.get_sizes() else 'false' }};
+const autoColor = {{ 'true' if product.colors|length == 1 else 'false' }};
+const autoSize  = {{ 'true' if product.get_sizes()|length == 1 else 'false' }};
 
-// ── COLOR SELECTION ────────────────────────────────────────
-function selectColor(btn, colorName) {
-  // Remove selected state from all color buttons
-  document.querySelectorAll('.color-select-btn').forEach(b => {
-    b.style.borderColor    = 'rgba(255,255,255,0.12)';
-    b.style.background     = 'rgba(255,255,255,0.04)';
-    b.style.color          = 'rgba(255,255,255,0.75)';
-    b.style.boxShadow      = 'none';
-    b.style.transform      = 'scale(1)';
-  });
-
-  // Highlight selected button
-  btn.style.borderColor = 'var(--coral)';
-  btn.style.background  = 'rgba(255,77,77,0.15)';
-  btn.style.color       = 'var(--white)';
-  btn.style.boxShadow   = '0 0 14px rgba(255,77,77,0.25)';
-  btn.style.transform   = 'scale(1.03)';
-
-  // Update label and hidden input
-  document.getElementById('selected-color-label').textContent = colorName;
-  document.getElementById('form-color-input').value           = colorName;
-
-  // Hide error if shown
+function selectColor(btn, name) {
+  document.querySelectorAll('.detail-color-tag').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('selected-color').value  = name;
+  document.getElementById('form-color').value      = name;
+  document.getElementById('color-label').textContent = name;
   const err = document.getElementById('color-error');
   if (err) err.style.display = 'none';
 }
 
-// ── SIZE SELECTION ─────────────────────────────────────────
 function pickSize(btn, size) {
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   document.getElementById('selected-size').value = size;
-
+  document.getElementById('form-size').value     = size;
+  document.getElementById('size-label').textContent = size;
   const err = document.getElementById('size-error');
   if (err) err.style.display = 'none';
 }
 
-// ── QTY ────────────────────────────────────────────────────
 function adjustQty(delta) {
   const input = document.getElementById('qty-input');
   const max   = parseInt(input.max);
@@ -218,36 +288,194 @@ function adjustQty(delta) {
   input.value = val;
 }
 
-// ── FORM VALIDATION ────────────────────────────────────────
-function validateForm() {
-  let valid = true;
-
-  // Check color selected (if product has colors)
-  if (hasColors) {
-    const colorVal = document.getElementById('form-color-input').value;
-    if (!colorVal) {
-      document.getElementById('color-error').style.display = 'block';
-      valid = false;
-    }
-  }
-
-  // Check size selected (if product has sizes)
-  if (hasSizes) {
-    const sizeVal = document.getElementById('selected-size').value;
-    if (!sizeVal) {
-      document.getElementById('size-error').style.display = 'block';
-      valid = false;
-    }
-  }
-
-  return valid;
-}
-
-// ── IMAGE SWAP ─────────────────────────────────────────────
 function swapImage(thumb) {
   document.querySelectorAll('.detail-thumb').forEach(t => t.classList.remove('active'));
   thumb.classList.add('active');
   document.getElementById('main-img').src = thumb.src;
 }
+
+  document.getElementById('login-prompt-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('login-prompt-modal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('login-prompt-modal');
+  if (e.target === modal) closeModal();
+});
+
+function toggleWishlist(productId) {
+  const btn   = document.getElementById('wishlist-btn');
+  const icon  = document.getElementById('wishlist-icon');
+  const label = document.getElementById('wishlist-label');
+
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+
+  fetch(`/wishlist/add/${productId}`, {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+
+    if (data.status === 'added') {
+      icon.textContent  = '♥';
+      label.textContent = 'In Wishlist';
+      btn.style.background  = 'var(--purple)';
+      btn.style.color       = 'white';
+      btn.style.borderColor = 'var(--purple)';
+    } else {
+      icon.textContent  = '♡';
+      label.textContent = 'Wishlist';
+      btn.style.background  = '';
+      btn.style.color       = '';
+      btn.style.borderColor = '';
+    }
+
+    updateWishlistBadge(data.status);
+    showToast(data.message);
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    showToast('Something went wrong. Please try again.');
+  });
+}
+
+function updateWishlistBadge(action) {
+  const wishlistLink = document.querySelector('a[href*="/wishlist"]');
+  if (!wishlistLink) return;
+
+  let badge = wishlistLink.querySelector('.wishlist-count');
+  let count = badge ? parseInt(badge.textContent) || 0 : 0;
+
+  if (action === 'added') {
+    count += 1;
+  } else {
+    count = Math.max(0, count - 1);
+  }
+
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'wishlist-count cart-count';
+      badge.style.background = 'var(--accent)';
+      wishlistLink.appendChild(badge);
+    }
+    badge.textContent = count;
+    badge.style.transform = 'scale(1.4)';
+    setTimeout(() => badge.style.transform = 'scale(1)', 200);
+  } else {
+    if (badge) badge.remove();
+  }
+}
+
+function showToast(message) {
+  // Remove existing toast if any
+  const existing = document.getElementById('ajax-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'ajax-toast';
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--purple);
+    color: white;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(108,63,197,0.35);
+    z-index: 9999;
+    opacity: 0;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+  `;
+  document.body.appendChild(toast);
+
+  // Animate in
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+
+  // Fade out after 2.5s
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+function validateForm() {
+  let valid = true;
+  if (hasColors && !autoColor) {
+    if (!document.getElementById('form-color').value) {
+      document.getElementById('color-error').style.display = 'block';
+      valid = false;
+    }
+  }
+  if (hasSizes && !autoSize) {
+    if (!document.getElementById('form-size').value) {
+      document.getElementById('size-error').style.display = 'block';
+      valid = false;
+    }
+  }
+  return valid;
+}
 </script>
+
+<!-- LOGIN PROMPT MODAL -->
+<div id="login-prompt-modal"
+     style="display:none;position:fixed;inset:0;background:rgba(30,27,46,0.6);
+            z-index:9999;align-items:center;justify-content:center;
+            backdrop-filter:blur(4px)">
+  <div style="background:var(--white);border-radius:var(--radius-xl);
+              padding:36px 40px;max-width:380px;width:90%;
+              box-shadow:var(--shadow-lg);text-align:center;
+              animation:scaleIn 0.25s ease both">
+
+    <div style="font-size:2.5rem;margin-bottom:14px;color:var(--purple)">♡</div>
+
+    <h2 style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;
+               letter-spacing:-0.02em;color:var(--text);margin-bottom:8px">
+      Save to Wishlist
+    </h2>
+    <p style="font-size:0.86rem;color:var(--muted);margin-bottom:24px;line-height:1.6">
+      Sign in or create a free account to save this item and shop it later.
+    </p>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <a href="{{ url_for('base.login', next=request.path) }}"
+         class="btn btn-purple btn-lg btn-full">
+        Sign In
+      </a>
+      <a href="{{ url_for('base.register') }}"
+         class="btn btn-outline btn-lg btn-full">
+        Create Account
+      </a>
+      <button type="button" onclick="closeModal()"
+              style="background:none;border:none;color:var(--muted);
+                     font-size:0.82rem;cursor:pointer;margin-top:4px;
+                     font-family:'DM Sans',sans-serif;padding:4px">
+        Continue browsing
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

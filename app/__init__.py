@@ -18,13 +18,16 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = raw_url.replace("postgres://", "postgresql://", 1)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-change-this")
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max upload
+    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
     app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "images")
 
     logging.basicConfig(level=logging.INFO)
 
     db.init_app(app)
     migrate.init_app(app, db)
+
+    # Import models so Flask-Migrate can detect them
+    from app import models  # noqa
 
     from app.admin import admin_bp
     from app.buyer import buyer_bp

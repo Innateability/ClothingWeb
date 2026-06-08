@@ -1,87 +1,85 @@
-{% extends "admin/layout.html" %}
-{% block title %}Orders{% endblock %}
-{% block page_title %}Orders{% endblock %}
+{% extends "layout.html" %}
+{% block title %}My Orders{% endblock %}
 {% block content %}
 
-<div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
-  <a href="{{ url_for('admin.orders', status='pending') }}"
-     class="btn {% if status == 'pending' %}btn-fire{% else %}btn-ghost{% endif %}">
-    ⏳ Pending
-  </a>
-  <a href="{{ url_for('admin.orders', status='confirmed') }}"
-     class="btn {% if status == 'confirmed' %}btn-lime{% else %}btn-ghost{% endif %}">
-    ✓ Confirmed
-  </a>
-  <a href="{{ url_for('admin.orders', status='rejected') }}"
-     class="btn {% if status == 'rejected' %}btn-danger{% else %}btn-ghost{% endif %}">
-    ✕ Rejected
-  </a>
-</div>
+<h1 style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:28px">
+  My Orders
+</h1>
 
 {% if orders %}
-<div class="card">
+{% for order in orders %}
+<div class="order-card" style="animation-delay:{{ loop.index0 * 0.07 }}s">
+  <div class="order-card-head">
+    <div>
+      <span class="order-id">Order #{{ order.id }}</span>
+      <span style="font-size:0.78rem;color:var(--muted);margin-left:10px">
+        {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}
+      </span>
+    </div>
+    <span class="tag {% if order.status == 'confirmed' %}tag-green{% elif order.status == 'rejected' %}tag-red{% else %}tag-purple{% endif %}">
+      {% if order.status == 'confirmed' %}✓{% elif order.status == 'rejected' %}✕{% else %}⏳{% endif %}
+      {{ order.status | title }}
+    </span>
+  </div>
+
   <div class="table-wrap">
     <table>
-      <thead>
-        <tr>
-          <th>Order</th><th>Buyer</th><th>Total</th>
-          <th>Date</th><th>Status</th><th>Actions</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Item</th><th>Size</th><th>Color</th><th>Qty</th><th>Price</th></tr></thead>
       <tbody>
-        {% for order in orders %}
+        {% for item in order.items %}
         <tr>
-          <td style="font-family:'Syne',sans-serif;font-weight:700">#{{ order.id }}</td>
+          <td style="font-weight:500">{{ item.product.name }}</td>
+          <td>{{ item.size or '—' }}</td>
           <td>
-            <div style="font-weight:500">{{ order.buyer.name }}</div>
-            <div style="font-size:0.78rem;color:var(--muted)">{{ order.buyer.email }}</div>
-          </td>
-          <td style="font-family:'Syne',sans-serif;font-weight:700;
-                     background:var(--g-fire);-webkit-background-clip:text;
-                     -webkit-text-fill-color:transparent;background-clip:text">
-            ₦{{ "{:,.0f}".format(order.total) }}
-          </td>
-          <td style="color:var(--muted);font-size:0.82rem">
-            {{ order.created_at.strftime('%d %b %Y') }}
-          </td>
-          <td>
-            <span class="tag
-              {% if order.status == 'confirmed' %}tag-green
-              {% elif order.status == 'rejected' %}tag-red
-              {% else %}tag-gold{% endif %}">
-              {{ order.status | title }}
-            </span>
-          </td>
-          <td>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <a href="{{ url_for('admin.order_detail', order_id=order.id) }}"
-                 class="btn btn-ghost btn-sm">View</a>
-              {% if order.status == 'pending' %}
-              <form method="POST" action="{{ url_for('admin.confirm_payment', order_id=order.id) }}">
-                <button type="submit" class="btn btn-sm"
-                  style="background:rgba(184,255,87,0.1);color:var(--lime);border:1px solid rgba(184,255,87,0.2)">
-                  Confirm
-                </button>
-              </form>
-              <form method="POST" action="{{ url_for('admin.reject_payment', order_id=order.id) }}">
-                <button type="submit" class="btn btn-danger btn-sm">Reject</button>
-              </form>
-              {% endif %}
+            {% if item.color %}
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="width:10px;height:10px;border-radius:50%;background:{{ item.color.lower() }};border:1px solid var(--border);display:inline-block"></span>
+              {{ item.color }}
             </div>
+            {% else %}—{% endif %}
           </td>
+          <td>{{ item.quantity }}</td>
+          <td>₦{{ "{:,.0f}".format(item.price * item.quantity) }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <div>
+      <span style="font-family:'Syne',sans-serif;font-weight:800;color:var(--purple)">
+        ₦{{ "{:,.0f}".format(order.total) }}
+      </span>
+      {% if order.status == 'confirmed' and order.estimated_delivery %}
+      <span style="font-size:0.78rem;color:var(--muted);margin-left:12px">
+        🚚 Est. delivery: {{ order.estimated_delivery.strftime('%d %b %Y') }}
+      </span>
+      {% elif order.status == 'pending' %}
+      <span style="font-size:0.78rem;color:var(--muted);margin-left:12px">
+        🕐 Delivery date confirmed after payment
+      </span>
+      {% endif %}
+    </div>
+    {% if order.delivery_address %}
+    <span style="font-size:0.78rem;color:var(--muted)">
+      📍 {{ order.delivery_address }}, {{ order.delivery_city }}
+    </span>
+    {% endif %}
+    {% if order.status == 'pending' %}
+    <a href="{{ url_for('base.retry_payment', order_id=order.id) }}"
+       class="btn btn-purple btn-sm">Pay Now</a>
+    {% endif %}
+  </div>
 </div>
+{% endfor %}
 
 {% else %}
 <div class="empty-state">
-  <span class="empty-icon">📋</span>
-  <div class="empty-title">No {{ status }} orders</div>
-  <p style="font-size:0.88rem">{{ status | title }} orders will appear here.</p>
+  <span class="empty-icon">📦</span>
+  <div class="empty-title">No orders yet</div>
+  <p style="font-size:0.88rem;margin-bottom:24px;color:var(--muted)">Your order history will appear here.</p>
+  <a href="{{ url_for('base.index') }}" class="btn btn-purple btn-lg">Start Shopping →</a>
 </div>
 {% endif %}
-
 {% endblock %}
