@@ -17,8 +17,10 @@
       <div class="detail-thumbs">
         {% for img in product.images %}
         <img src="{{ url_for('static', filename='images/' + img.filename) }}"
+             data-full="{{ url_for('static', filename='images/' + img.filename) }}"
              class="detail-thumb {% if img.is_primary %}active{% endif %}"
-             onclick="swapImage(this)">
+             onclick="swapImage(this)"
+             alt="{{ img.filename }}">
         {% endfor %}
       </div>
       {% endif %}
@@ -259,26 +261,50 @@ const hasSizes  = {{ 'true' if product.get_sizes() else 'false' }};
 const autoColor = {{ 'true' if product.colors|length == 1 else 'false' }};
 const autoSize  = {{ 'true' if product.get_sizes()|length == 1 else 'false' }};
 
+/* ── IMAGE GALLERY ─────────────────────────── */
+function swapImage(thumb) {
+  const mainImg = document.getElementById('main-img');
+  if (!mainImg) return;
+
+  const newSrc = thumb.getAttribute('data-full') || thumb.src;
+
+  // Fade out → swap src → fade in
+  mainImg.style.transition = 'opacity 0.15s ease';
+  mainImg.style.opacity    = '0';
+
+  setTimeout(() => {
+    mainImg.src   = newSrc;
+    mainImg.onload = () => { mainImg.style.opacity = '1'; };
+    if (mainImg.complete) mainImg.style.opacity = '1';
+  }, 150);
+
+  document.querySelectorAll('.detail-thumb').forEach(t => t.classList.remove('active'));
+  thumb.classList.add('active');
+}
+
+/* ── COLOR SELECTION ───────────────────────── */
 function selectColor(btn, name) {
   document.querySelectorAll('.detail-color-tag').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  document.getElementById('selected-color').value  = name;
-  document.getElementById('form-color').value      = name;
-  document.getElementById('color-label').textContent = name;
+  document.getElementById('selected-color').value     = name;
+  document.getElementById('form-color').value         = name;
+  document.getElementById('color-label').textContent  = name;
   const err = document.getElementById('color-error');
   if (err) err.style.display = 'none';
 }
 
+/* ── SIZE SELECTION ────────────────────────── */
 function pickSize(btn, size) {
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  document.getElementById('selected-size').value = size;
-  document.getElementById('form-size').value     = size;
+  document.getElementById('selected-size').value    = size;
+  document.getElementById('form-size').value        = size;
   document.getElementById('size-label').textContent = size;
   const err = document.getElementById('size-error');
   if (err) err.style.display = 'none';
 }
 
+/* ── QTY ───────────────────────────────────── */
 function adjustQty(delta) {
   const input = document.getElementById('qty-input');
   const max   = parseInt(input.max);
@@ -288,139 +314,7 @@ function adjustQty(delta) {
   input.value = val;
 }
 
-function swapImage(thumb) {
-  document.querySelectorAll('.detail-thumb').forEach(t => t.classList.remove('active'));
-  thumb.classList.add('active');
-  document.getElementById('main-img').src = thumb.src;
-}
-
-  document.getElementById('login-prompt-modal').style.display = 'flex';
-}
-
-function closeModal() {
-  document.getElementById('login-prompt-modal').style.display = 'none';
-}
-
-// Close modal when clicking outside
-document.addEventListener('click', function(e) {
-  const modal = document.getElementById('login-prompt-modal');
-  if (e.target === modal) closeModal();
-});
-
-function toggleWishlist(productId) {
-  const btn   = document.getElementById('wishlist-btn');
-  const icon  = document.getElementById('wishlist-icon');
-  const label = document.getElementById('wishlist-label');
-
-  btn.disabled = true;
-  btn.style.opacity = '0.6';
-
-  fetch(`/wishlist/add/${productId}`, {
-    method: 'POST',
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest',
-      'Content-Type': 'application/json'
-    }
-  })
-  .then(res => res.json())
-  .then(data => {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-
-    if (data.status === 'added') {
-      icon.textContent  = '♥';
-      label.textContent = 'In Wishlist';
-      btn.style.background  = 'var(--purple)';
-      btn.style.color       = 'white';
-      btn.style.borderColor = 'var(--purple)';
-    } else {
-      icon.textContent  = '♡';
-      label.textContent = 'Wishlist';
-      btn.style.background  = '';
-      btn.style.color       = '';
-      btn.style.borderColor = '';
-    }
-
-    updateWishlistBadge(data.status);
-    showToast(data.message);
-  })
-  .catch(() => {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    showToast('Something went wrong. Please try again.');
-  });
-}
-
-function updateWishlistBadge(action) {
-  const wishlistLink = document.querySelector('a[href*="/wishlist"]');
-  if (!wishlistLink) return;
-
-  let badge = wishlistLink.querySelector('.wishlist-count');
-  let count = badge ? parseInt(badge.textContent) || 0 : 0;
-
-  if (action === 'added') {
-    count += 1;
-  } else {
-    count = Math.max(0, count - 1);
-  }
-
-  if (count > 0) {
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.className = 'wishlist-count cart-count';
-      badge.style.background = 'var(--accent)';
-      wishlistLink.appendChild(badge);
-    }
-    badge.textContent = count;
-    badge.style.transform = 'scale(1.4)';
-    setTimeout(() => badge.style.transform = 'scale(1)', 200);
-  } else {
-    if (badge) badge.remove();
-  }
-}
-
-function showToast(message) {
-  // Remove existing toast if any
-  const existing = document.getElementById('ajax-toast');
-  if (existing) existing.remove();
-
-  const toast = document.createElement('div');
-  toast.id = 'ajax-toast';
-  toast.textContent = message;
-  toast.style.cssText = `
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--purple);
-    color: white;
-    padding: 10px 24px;
-    border-radius: 30px;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    box-shadow: 0 8px 24px rgba(108,63,197,0.35);
-    z-index: 9999;
-    opacity: 0;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-  `;
-  document.body.appendChild(toast);
-
-  // Animate in
-  requestAnimationFrame(() => {
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateX(-50%) translateY(0)';
-  });
-
-  // Fade out after 2.5s
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(-50%) translateY(10px)';
-    setTimeout(() => toast.remove(), 300);
-  }, 2500);
-}
-
+/* ── FORM VALIDATION ───────────────────────── */
 function validateForm() {
   let valid = true;
   if (hasColors && !autoColor) {
@@ -436,6 +330,111 @@ function validateForm() {
     }
   }
   return valid;
+}
+
+/* ── LOGIN MODAL ───────────────────────────── */
+function promptLogin() {
+  document.getElementById('login-prompt-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('login-prompt-modal').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('login-prompt-modal');
+  if (modal && e.target === modal) closeModal();
+});
+
+/* ── WISHLIST AJAX ─────────────────────────── */
+function toggleWishlist(productId) {
+  const btn   = document.getElementById('wishlist-btn');
+  const icon  = document.getElementById('wishlist-icon');
+  const label = document.getElementById('wishlist-label');
+
+  btn.disabled      = true;
+  btn.style.opacity = '0.6';
+
+  fetch(`/wishlist/add/${productId}`, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled      = false;
+    btn.style.opacity = '1';
+
+    if (data.status === 'added') {
+      icon.textContent       = '♥';
+      label.textContent      = 'In Wishlist';
+      btn.style.background   = 'var(--purple)';
+      btn.style.color        = 'white';
+      btn.style.borderColor  = 'var(--purple)';
+    } else {
+      icon.textContent       = '♡';
+      label.textContent      = 'Wishlist';
+      btn.style.background   = '';
+      btn.style.color        = '';
+      btn.style.borderColor  = '';
+    }
+    updateWishlistBadge(data.status);
+    showToast(data.message);
+  })
+  .catch(() => {
+    btn.disabled      = false;
+    btn.style.opacity = '1';
+    showToast('Something went wrong. Please try again.');
+  });
+}
+
+function updateWishlistBadge(action) {
+  const link = document.querySelector('a[href*="/wishlist"]');
+  if (!link) return;
+  let badge = link.querySelector('.wishlist-count');
+  let count = badge ? parseInt(badge.textContent) || 0 : 0;
+  if (action === 'added') count += 1;
+  else count = Math.max(0, count - 1);
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className        = 'wishlist-count cart-count';
+      badge.style.background = 'var(--accent)';
+      link.appendChild(badge);
+    }
+    badge.textContent        = count;
+    badge.style.transform    = 'scale(1.4)';
+    setTimeout(() => badge.style.transform = 'scale(1)', 200);
+  } else {
+    if (badge) badge.remove();
+  }
+}
+
+function showToast(message) {
+  const existing = document.getElementById('ajax-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id    = 'ajax-toast';
+  toast.textContent = message;
+  toast.style.cssText = `
+    position:fixed;bottom:24px;left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--purple);color:white;
+    padding:10px 24px;border-radius:30px;
+    font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:600;
+    box-shadow:0 8px 24px rgba(108,63,197,0.35);
+    z-index:9999;opacity:0;transition:all 0.3s ease;white-space:nowrap;
+  `;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.style.opacity   = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  setTimeout(() => {
+    toast.style.opacity   = '0';
+    toast.style.transform = 'translateX(-50%) translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
 }
 </script>
 
